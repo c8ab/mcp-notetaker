@@ -1,0 +1,339 @@
+= Design: Note Management
+:version: 1.0.0
+:status: Current
+:source-stories-version: 1.0.0
+:source-spec-version: 1.0.0
+:last-updated: 2026-02-25
+:feature: note-management
+:toc:
+
+== Technical Context
+
+Greenfield MCP server project. No existing code, infrastructure, or dependencies. The system is a standalone MCP server that exposes tools for creating, reading, updating, deleting, listing, and searching atomic notes. Notes are persisted in a local SQLite database. The server communicates with MCP clients (AI agents, IDE extensions) over stdio transport.
+
+== Decisions and Constraints
+
+* <<../../adrs/0001-use-typescript-with-mcp-sdk.adoc#,ADR-0001>>: Use TypeScript with the Official MCP SDK
+* <<../../adrs/0002-use-sqlite-with-better-sqlite3.adoc#,ADR-0002>>: Use SQLite with better-sqlite3
+* <<../../adrs/0003-soft-delete-pattern.adoc#,ADR-0003>>: Soft-Delete Pattern for Notes
+* <<../../adrs/0004-uuid-v7-for-note-identifiers.adoc#,ADR-0004>>: UUID v7 for Note Identifiers
+
+No project-wide constraints exist yet (`constraints.adoc` has not been created).
+
+== Research and Unknowns
+
+=== Resolved
+
+Database location:: The database file path will be configurable via the `NOTETAKER_DB_PATH` environment variable. Default: `~/.local/share/mcp-notetaker/notes.db` on Linux/macOS. The directory will be created automatically if it does not exist.
+
+FTS strategy:: SQLite FTS5 will power full-text search over note title and content. An FTS5 virtual table will mirror the notes table and be kept in sync via application-level inserts/updates/deletes.
+
+Tag storage:: Tags will be stored as a JSON array in a TEXT column (e.g., `["architecture", "decision"]`). Filtering by tags will use `json_each()` to check containment. This avoids a separate junction table while SQLite's JSON1 extension provides efficient querying.
+
+MCP transport:: The server will use stdio transport only. This is the standard transport for locally-run MCP servers invoked by clients like Claude Desktop, VS Code, and CLI tools.
+
+=== Open Questions
+
+None.
+
+== System Design
+
+=== Component Interaction
+
+[source,mermaid]
+----
+flowchart LR
+  subgraph Client["MCP Client (Agent / IDE)"]
+    CALLER[Tool Caller]
+  end
+
+  subgraph Server["MCP Server (stdio)"]
+    MCP[MCP Server\n@modelcontextprotocol/sdk]
+    TOOLS[Tool Handlers]
+    REPO[NoteRepository]
+  end
+
+  DB[(SQLite\nnotes.db)]
+
+  CALLER -->|"stdio (JSON-RPC)"| MCP
+  MCP --> TOOLS
+  TOOLS --> REPO
+  REPO --> DB
+  MCP -->|"stdio (JSON-RPC)"| CALLER
+----
+
+The server has three layers:
+
+MCP Server:: The `@modelcontextprotocol/sdk` `Server` class handles protocol negotiation, tool registration, and JSON-RPC message routing over stdio. Configuration is minimal -- it registers tool definitions and delegates to tool handlers.
+
+Tool Handlers:: One handler function per MCP tool. Each handler validates input parameters (via Zod schemas), calls the NoteRepository, and formats the response. Handlers are thin -- they do not contain business logic beyond input validation and response formatting.
+
+NoteRepository:: A class encapsulating all SQLite operations. Provides methods matching the CRUD operations: `create`, `getById`, `list`, `update`, `softDelete`, and `search`. Manages the database connection, schema initialization (including FTS5 table), and query construction. Uses `better-sqlite3` for synchronous database access.
+
+=== Create Note Flow
+
+[source,mermaid]
+----
+sequenceDiagram
+  actor Agent as MCP Client
+  participant Server as MCP Server
+  participant Handler as create_note Handler
+  participant Repo as NoteRepository
+  participant DB as SQLite
+
+  Agent->>Server: tools/call: create_note
+  Server->>Handler: dispatch(params)
+  Handler->>Handler: Validate input (Zod)
+
+  opt parent_note_id provided
+    Handler->>Repo: getById(parent_note_id)
+    Repo->>DB: SELECT ... WHERE note_id = ? AND deleted_at IS NULL
+    DB-->>Repo: row or null
+    Repo-->>Handler: note or null
+    alt parent not found
+      Handler-->>Server: Error: parent note not found
+      Server-->>Agent: Error response
+    end
+  end
+
+  Handler->>Repo: create(noteData)
+  Repo->>Repo: Generate UUID v7
+  Repo->>Repo: Set created_at, updated_at
+  Repo->>DB: INSERT INTO notes (...)
+  Repo->>DB: INSERT INTO notes_fts (...)
+  DB-->>Repo: OK
+  Repo-->>Handler: Complete note record
+  Handler-->>Server: Tool result (note JSON)
+  Server-->>Agent: Success response
+----
+
+=== Soft-Delete State Diagram
+
+[source,mermaid]
+----
+stateDiagram-v2
+  [*] --> Active : Note created
+  Active --> Active : Updated
+  Active --> Deleted : Soft-deleted (deleted_at set)
+
+  note right of Deleted
+    Note excluded from get, list, search.
+    Cannot be updated or re-deleted.
+    Data preserved in database.
+  end note
+----
+
+=== Project Structure
+
+[source]
+----
+mcp-notetaker/
+├── src/
+│   ├── index.ts            # Entry point: creates Server, registers tools, starts stdio
+│   ├── tools/
+│   │   ├── create-note.ts  # create_note tool definition and handler
+│   │   ├── get-note.ts     # get_note tool definition and handler
+│   │   ├── list-notes.ts   # list_notes tool definition and handler
+│   │   ├── update-note.ts  # update_note tool definition and handler
+│   │   ├── delete-note.ts  # delete_note tool definition and handler
+│   │   └── search-notes.ts # search_notes tool definition and handler
+│   ├── repository/
+│   │   └── note-repository.ts  # NoteRepository class (all DB operations)
+│   ├── schema.ts           # Zod schemas for note input/output validation
+│   └── types.ts            # TypeScript type definitions (Note, CreateNoteInput, etc.)
+├── package.json
+├── tsconfig.json
+└── vitest.config.ts
+----
+
+=== MCP Tool Definitions
+
+Each tool is registered with the MCP server with a name, description, and Zod input schema.
+
+==== create_note
+
+Creates a new atomic note.
+
+Input parameters:
+
+[cols="1,1,1,2", options="header"]
+|===
+| Parameter | Type | Required | Description
+
+| title | string | No | Short title for the note
+| content | string | Yes | Note body in AsciiDoc format
+| session_id | string | Yes | Session identifier
+| user_id | string | Yes | Who is taking the note
+| agent | string | Yes | Which agent is creating the note
+| tags | string[] | No | Array of tags for categorization
+| parent_note_id | string | No | ID of a parent note for threading
+| context_url | string | No | URL or file path the note relates to
+|===
+
+Returns: Complete note record with generated note_id, created_at, updated_at.
+
+==== get_note
+
+Retrieves a single note by ID.
+
+Input parameters:
+
+[cols="1,1,1,2", options="header"]
+|===
+| Parameter | Type | Required | Description
+
+| note_id | string | Yes | The note ID to retrieve
+|===
+
+Returns: Complete note record. Error if not found or soft-deleted.
+
+==== list_notes
+
+Lists notes with optional filters.
+
+Input parameters:
+
+[cols="1,1,1,2", options="header"]
+|===
+| Parameter | Type | Required | Description
+
+| session_id | string | No | Filter by session
+| user_id | string | No | Filter by note taker
+| agent | string | No | Filter by agent
+| tags | string[] | No | Filter by tags (must contain all)
+| parent_note_id | string | No | Filter by parent note (direct children)
+|===
+
+Returns: Array of note records, ordered by created_at descending. Excludes soft-deleted notes.
+
+==== update_note
+
+Updates an existing note's mutable fields.
+
+Input parameters:
+
+[cols="1,1,1,2", options="header"]
+|===
+| Parameter | Type | Required | Description
+
+| note_id | string | Yes | The note ID to update
+| title | string | No | New title
+| content | string | No | New content (AsciiDoc)
+| tags | string[] | No | New tags (replaces existing)
+| context_url | string | No | New context URL
+| parent_note_id | string | No | New parent note ID
+|===
+
+Returns: Complete updated note record. Error if not found or soft-deleted.
+
+==== delete_note
+
+Soft-deletes a note.
+
+Input parameters:
+
+[cols="1,1,1,2", options="header"]
+|===
+| Parameter | Type | Required | Description
+
+| note_id | string | Yes | The note ID to delete
+|===
+
+Returns: Confirmation with note_id and deleted_at timestamp. Error if not found or already deleted.
+
+==== search_notes
+
+Searches notes by text content.
+
+Input parameters:
+
+[cols="1,1,1,2", options="header"]
+|===
+| Parameter | Type | Required | Description
+
+| query | string | Yes | Search query string
+|===
+
+Returns: Array of matching note records, ordered by FTS5 relevance rank. Excludes soft-deleted notes.
+
+=== NoteRepository
+
+The repository encapsulates all database operations. Key design decisions:
+
+Initialization:: On construction, the repository opens (or creates) the SQLite database, enables WAL mode for better read concurrency, and runs schema migrations. Migrations are idempotent (using `CREATE TABLE IF NOT EXISTS`).
+
+Prepared statements:: Frequently-used queries are prepared once and reused for performance.
+
+FTS sync:: The FTS5 table (`notes_fts`) is kept in sync at the application level. On insert, a corresponding FTS row is added. On update, the FTS row is deleted and re-inserted. On soft-delete, the FTS row is deleted. This ensures soft-deleted notes are excluded from search results without extra filtering.
+
+Tag querying:: The `list` method with a tags filter uses a subquery with `json_each()` to find notes containing all requested tags. The query checks that the count of matching tags equals the count of requested tags (AND semantics).
+
+== Story Resolution
+
+=== US-001: Create a Note
+
+Components:: create_note tool handler, NoteRepository.create, Zod input schema
+Criteria::
+* Accept title, content, session_id, user_id, agent -> create_note input schema validates required fields, NoteRepository.create inserts row (NOTE-001)
+* Generate unique note_id -> NoteRepository.create generates UUID v7 before insert (NOTE-002)
+* Record timestamps -> NoteRepository.create sets created_at and updated_at to current ISO 8601 time (NOTE-003)
+* Store optional fields -> Zod schema marks tags, parent_note_id, context_url as optional; NoteRepository stores them (NOTE-004)
+* Verify parent exists -> Handler checks NoteRepository.getById(parent_note_id) before create (NOTE-005)
+* Reject invalid parent -> Handler returns error if getById returns null for parent_note_id (NOTE-006)
+* Return complete record -> Handler returns full note object from NoteRepository.create (NOTE-007)
+
+=== US-002: Retrieve a Note
+
+Components:: get_note tool handler, NoteRepository.getById
+Criteria::
+* Return complete record by ID -> get_note handler calls NoteRepository.getById, returns full note (NOTE-008)
+* Error if not found -> NoteRepository.getById returns null, handler returns not-found error (NOTE-009)
+* Exclude soft-deleted -> NoteRepository.getById query includes `WHERE deleted_at IS NULL` (NOTE-010)
+* Soft-deleted returns not-found -> Same as above; soft-deleted notes return null from getById (NOTE-010)
+
+=== US-003: List and Filter Notes
+
+Components:: list_notes tool handler, NoteRepository.list
+Criteria::
+* Return non-deleted unfiltered -> NoteRepository.list with no params returns all rows where deleted_at IS NULL (NOTE-011)
+* Filter by session_id -> NoteRepository.list adds `WHERE session_id = ?` (NOTE-012)
+* Filter by user_id -> NoteRepository.list adds `WHERE user_id = ?` (NOTE-013)
+* Filter by agent -> NoteRepository.list adds `WHERE agent = ?` (NOTE-014)
+* Filter by tags -> NoteRepository.list uses json_each subquery for tag containment (NOTE-015)
+* Filter by parent_note_id -> NoteRepository.list adds `WHERE parent_note_id = ?` (NOTE-016)
+* Exclude soft-deleted -> All list queries include `WHERE deleted_at IS NULL` (NOTE-017)
+* Order newest first -> NoteRepository.list appends `ORDER BY created_at DESC` (NOTE-018)
+
+=== US-004: Update a Note
+
+Components:: update_note tool handler, NoteRepository.update, NoteRepository.getById
+Criteria::
+* Apply changes -> update_note handler calls NoteRepository.update with changed fields (NOTE-019)
+* Updatable fields -> Zod schema accepts title, content, tags, context_url, parent_note_id (NOTE-020)
+* Immutable fields -> Zod schema does not accept note_id, session_id, user_id, agent, created_at in update input; NoteRepository.update never overwrites them (NOTE-021)
+* Set updated_at -> NoteRepository.update sets updated_at to current timestamp (NOTE-022)
+* Error if not found -> Handler calls NoteRepository.getById first; returns not-found if null (NOTE-023)
+* Error if soft-deleted -> NoteRepository.getById excludes soft-deleted; returns not-found (NOTE-024)
+* Verify parent on update -> Handler checks NoteRepository.getById(parent_note_id) if provided (NOTE-025)
+* Reject invalid parent -> Handler returns error if parent getById returns null (NOTE-026)
+* Return complete record -> Handler returns full note from NoteRepository.update (NOTE-027)
+
+=== US-005: Delete a Note (Soft-Delete)
+
+Components:: delete_note tool handler, NoteRepository.softDelete, NoteRepository.getById
+Criteria::
+* Set deleted_at -> NoteRepository.softDelete sets deleted_at to current timestamp (NOTE-028)
+* Preserve record -> NoteRepository.softDelete uses UPDATE, not DELETE (NOTE-028)
+* Error if not found -> Handler calls NoteRepository.getById; returns not-found if null (NOTE-029)
+* Error if already deleted -> Handler checks for existing deleted_at via a separate query that does not filter deleted; returns already-deleted error (NOTE-030)
+* Return confirmation -> Handler returns {note_id, deleted_at} on success (NOTE-031)
+
+=== US-006: Search Notes by Content
+
+Components:: search_notes tool handler, NoteRepository.search
+Criteria::
+* Search title and content -> NoteRepository.search queries FTS5 table joined with notes where deleted_at IS NULL (NOTE-032)
+* Case-insensitive -> FTS5 tokenizer handles case folding by default (NOTE-033)
+* Exclude soft-deleted -> FTS join filters on deleted_at IS NULL (NOTE-034)
+* Empty list for no matches -> NoteRepository.search returns empty array (NOTE-035)
+* Order by relevance -> NoteRepository.search orders by FTS5 rank function (NOTE-036)

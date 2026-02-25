@@ -1,0 +1,91 @@
+= User Stories: Note Management
+:version: 1.0.0
+:last-updated: 2026-02-25
+:feature: note-management
+:toc:
+
+== US-001: Create a Note
+As an AI agent,
+I want to create an atomic note with metadata,
+so that observations and decisions are captured during a working session.
+
+Acceptance Criteria:
+
+* [ ] The system shall accept a note with title, content (AsciiDoc), session_id, user_id, and agent fields.
+* [ ] The system shall generate a unique note_id for each created note.
+* [ ] The system shall record created_at and updated_at timestamps in ISO 8601 format at creation time.
+* [ ] When the caller provides optional fields (tags, parent_note_id, context_url), the system shall store them with the note.
+* [ ] When the caller provides a parent_note_id, the system shall verify the referenced note exists.
+* [ ] If the referenced parent_note_id does not exist, then the system shall reject the request with an error indicating the parent note was not found.
+* [ ] When the note is created successfully, the system shall return the complete note record including all generated fields.
+
+== US-002: Retrieve a Note
+As an AI agent,
+I want to retrieve a specific note by its ID,
+so that I can reference previously captured information.
+
+Acceptance Criteria:
+
+* [ ] When the caller requests a note by note_id, the system shall return the complete note record.
+* [ ] If the requested note_id does not exist, then the system shall return an error indicating the note was not found.
+* [ ] The system shall not return notes that have been soft-deleted.
+* [ ] If the requested note has been soft-deleted, then the system shall return an error indicating the note was not found.
+
+== US-003: List and Filter Notes
+As an AI agent,
+I want to list notes with optional filters,
+so that I can find relevant notes across sessions and contexts.
+
+Acceptance Criteria:
+
+* [ ] The system shall return a list of non-deleted notes when no filters are provided.
+* [ ] When the caller provides a session_id filter, the system shall return only notes belonging to that session.
+* [ ] When the caller provides a user_id filter, the system shall return only notes created by that user.
+* [ ] When the caller provides an agent filter, the system shall return only notes from that agent.
+* [ ] When the caller provides a tags filter, the system shall return only notes that contain all specified tags.
+* [ ] When the caller provides a parent_note_id filter, the system shall return only direct child notes of that parent.
+* [ ] The system shall not include soft-deleted notes in list results.
+* [ ] The system shall return notes ordered by created_at descending (newest first).
+
+== US-004: Update a Note
+As an AI agent,
+I want to update an existing note's content and metadata,
+so that notes can be corrected or enriched after initial capture.
+
+Acceptance Criteria:
+
+* [ ] When the caller provides a note_id and updated fields, the system shall apply the changes to the specified note.
+* [ ] The system shall allow updating title, content, tags, context_url, and parent_note_id fields.
+* [ ] The system shall not allow updating note_id, session_id, user_id, agent, or created_at fields.
+* [ ] When a note is updated, the system shall set updated_at to the current timestamp.
+* [ ] If the specified note_id does not exist, then the system shall return an error indicating the note was not found.
+* [ ] If the specified note has been soft-deleted, then the system shall return an error indicating the note was not found.
+* [ ] When a parent_note_id is provided in the update, the system shall verify the referenced note exists.
+* [ ] If the referenced parent_note_id does not exist, then the system shall reject the update with an error indicating the parent note was not found.
+* [ ] When the note is updated successfully, the system shall return the complete updated note record.
+
+== US-005: Delete a Note (Soft-Delete)
+As an AI agent,
+I want to soft-delete a note,
+so that notes can be removed from active use while preserving audit history.
+
+Acceptance Criteria:
+
+* [ ] When the caller requests deletion of a note by note_id, the system shall set the deleted_at timestamp on that note.
+* [ ] The system shall not permanently remove the note record from the database.
+* [ ] If the specified note_id does not exist, then the system shall return an error indicating the note was not found.
+* [ ] If the specified note has already been soft-deleted, then the system shall return an error indicating the note was already deleted.
+* [ ] When the note is soft-deleted successfully, the system shall return a confirmation with the note_id and deleted_at timestamp.
+
+== US-006: Search Notes by Content
+As an AI agent,
+I want to search notes by text content,
+so that I can find notes related to a specific topic without knowing exact metadata.
+
+Acceptance Criteria:
+
+* [ ] When the caller provides a search query, the system shall return notes whose title or content matches the query.
+* [ ] The system shall perform case-insensitive matching.
+* [ ] The system shall not include soft-deleted notes in search results.
+* [ ] When no notes match the query, the system shall return an empty list.
+* [ ] The system shall return matching notes ordered by relevance.

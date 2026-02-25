@@ -1,0 +1,36 @@
+= ADR-0002: Use SQLite with better-sqlite3
+:status: Accepted
+:date: 2026-02-25
+:deciders: User, AI Agent
+
+== Context
+
+The note management system requires persistent storage for atomic notes with metadata. The storage must support CRUD operations, filtering by multiple fields, and full-text search. The system runs as a local MCP server, typically alongside a single user's development tools.
+
+== Decision
+
+Use SQLite as the database engine via the `better-sqlite3` npm package.
+
+SQLite is a serverless, file-based database that requires no separate process. `better-sqlite3` provides synchronous access which simplifies the MCP tool handler code (no async/await for database operations). The database file will be stored at a configurable path, defaulting to a location in the user's data directory.
+
+SQLite FTS5 (Full-Text Search) will be used for content search functionality.
+
+== Consequences
+
+* Zero infrastructure -- no database server to install or manage.
+* Single file storage is easy to back up, move, or delete.
+* Synchronous API simplifies error handling in MCP tool handlers.
+* `better-sqlite3` is a native addon requiring compilation, but prebuilt binaries are available for common platforms.
+* Single-writer model is sufficient for a local MCP server (one user, one process).
+* FTS5 provides efficient full-text search without external services.
+
+== Alternatives Considered
+
+=== PostgreSQL
+Overkill for a local single-user tool. Requires a running database server and connection management. Rejected due to unnecessary operational complexity.
+
+=== LevelDB / RocksDB
+Key-value stores lack relational querying (filtering by session, user, agent) and full-text search. Would require building query logic in application code. Rejected due to insufficient query capabilities.
+
+=== Async SQLite (e.g., sql.js, node-sqlite3)
+Async database access adds complexity to MCP handlers without benefit since the server handles one request at a time. `better-sqlite3`'s synchronous API is a better fit for the MCP server's request-response pattern. Rejected in favor of simpler synchronous API.

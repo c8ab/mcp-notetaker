@@ -1,0 +1,34 @@
+= ADR-0004: UUID v7 for Note Identifiers
+:status: Accepted
+:date: 2026-02-25
+:deciders: User, AI Agent
+
+== Context
+
+Each note requires a unique identifier (note_id). The identifier must be unique across all notes, suitable for use as a primary key, and ideally time-sortable to support chronological ordering without requiring a secondary index on timestamps.
+
+== Decision
+
+Use UUID v7 (RFC 9562) for generating note_id values. UUID v7 encodes a Unix timestamp in the most significant bits, providing:
+
+* Guaranteed uniqueness without coordination
+* Lexicographic sorting that matches chronological order
+* Standard 36-character string representation (e.g., `01926b1c-7e4a-7d3f-8b1c-4e3d2a1b0c9f`)
+
+== Consequences
+
+* Natural chronological ordering from the ID alone -- B-tree indexes are insert-efficient.
+* Standard format, parseable by any UUID library.
+* Slightly larger than an auto-increment integer, but the tradeoff is worthwhile for distributed-friendly IDs.
+* Requires a UUID v7 generation library (or custom implementation using `crypto.randomUUID()` with timestamp prefix).
+
+== Alternatives Considered
+
+=== UUID v4 (random)
+Fully random, no time component. B-tree index performance degrades with random inserts. Rejected due to lack of time-ordering and index fragmentation.
+
+=== ULID
+Similar time-sortable properties to UUID v7 but non-standard format. UUID v7 is now standardized in RFC 9562 and is the preferred approach. Rejected in favor of the standardized UUID v7.
+
+=== Auto-increment integer
+Simple and compact but requires centralized coordination and leaks ordering information. Not suitable if the system ever needs to merge data from multiple sources. Rejected for lack of portability.

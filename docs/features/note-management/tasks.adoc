@@ -1,0 +1,151 @@
+= Implementation Tasks: Note Management
+:version: 1.0.0
+:status: Current
+:source-design-version: 1.0.0
+:source-stories-version: 1.0.0
+:source-spec-version: 1.0.0
+:last-updated: 2026-02-25
+:feature: note-management
+:toc:
+
+== Overview
+
+Implementation plan for the note management MCP server. 4 phases, 13 tasks. The plan progresses from project scaffolding and data layer through the NoteRepository, individual MCP tool handlers, and finally integration wiring.
+
+== Phase 1: Foundation
+
+Set up the TypeScript project, dependencies, and SQLite database schema.
+
+* [x] TASK-001: Scaffold TypeScript project with MCP SDK [sequential]
++
+Components:: Project root, package.json, tsconfig.json
+Stories:: (all -- infrastructure)
+Specs:: (none directly -- enables all)
+Description:: Initialize the project with `package.json` (type: module, ESM). Install dependencies: `@modelcontextprotocol/sdk`, `better-sqlite3`, `zod`. Install dev dependencies: `typescript`, `@types/better-sqlite3`, `vitest`. Create `tsconfig.json` targeting ES2022 with ESM module resolution. Create the `src/` directory structure: `src/index.ts`, `src/tools/`, `src/repository/`. Add build and start scripts.
+
+* [x] TASK-002: Define TypeScript types and Zod schemas [parallel]
++
+Components:: src/types.ts, src/schema.ts
+Stories:: US-001, US-004
+Specs:: NOTE-001, NOTE-020, NOTE-021
+Description:: Create `src/types.ts` with TypeScript interfaces: `Note` (all 12 fields), `CreateNoteInput` (required: content, session_id, user_id, agent; optional: title, tags, parent_note_id, context_url), `UpdateNoteInput` (required: note_id; optional: title, content, tags, context_url, parent_note_id), `ListNotesInput` (all optional filters), `SearchNotesInput` (required: query). Create `src/schema.ts` with corresponding Zod schemas for MCP tool input validation. Zod schemas enforce required/optional semantics and string types.
+
+* [x] TASK-003: Implement NoteRepository with schema initialization [sequential]
++
+Components:: src/repository/note-repository.ts, SQLite database
+Stories:: US-001, US-002, US-003, US-004, US-005, US-006
+Specs:: NOTE-002, NOTE-003
+Description:: Create `NoteRepository` class. Constructor accepts a database file path, opens the SQLite connection via `better-sqlite3`, enables WAL mode, and runs idempotent schema creation (notes table with all columns, all 6 indexes, FTS5 virtual table). Implement UUID v7 generation utility. Implement `close()` method for cleanup.
+
+== Phase 2: Repository CRUD Methods
+
+Implement all data access methods on NoteRepository.
+
+* [ ] TASK-004: Implement NoteRepository.create [sequential]
++
+Components:: src/repository/note-repository.ts
+Stories:: US-001
+Specs:: NOTE-001, NOTE-002, NOTE-003, NOTE-004, NOTE-005, NOTE-006, NOTE-007
+Description:: Implement `create(input: CreateNoteInput): Note`. Generate UUID v7 for note_id. Set created_at and updated_at to current ISO 8601 timestamp. Insert row into notes table. Insert corresponding row into notes_fts (title, content). Return complete note record. Use prepared statements.
+
+* [ ] TASK-005: Implement NoteRepository.getById [parallel]
++
+Components:: src/repository/note-repository.ts
+Stories:: US-002
+Specs:: NOTE-008, NOTE-009, NOTE-010
+Description:: Implement `getById(noteId: string): Note | null`. Query notes table with `WHERE note_id = ? AND deleted_at IS NULL`. Return the note record or null. Use prepared statement.
+
+* [ ] TASK-006: Implement NoteRepository.list [parallel]
++
+Components:: src/repository/note-repository.ts
+Stories:: US-003
+Specs:: NOTE-011, NOTE-012, NOTE-013, NOTE-014, NOTE-015, NOTE-016, NOTE-017, NOTE-018
+Description:: Implement `list(filters: ListNotesInput): Note[]`. Build dynamic SQL query starting from `SELECT * FROM notes WHERE deleted_at IS NULL`. Append conditions for each provided filter: session_id, user_id, agent (exact match), parent_note_id (exact match), tags (subquery using `json_each()` with AND semantics -- count of matching tags equals count of requested tags). Append `ORDER BY created_at DESC`. Return array of note records.
+
+* [ ] TASK-007: Implement NoteRepository.update [parallel]
++
+Components:: src/repository/note-repository.ts
+Stories:: US-004
+Specs:: NOTE-019, NOTE-020, NOTE-021, NOTE-022, NOTE-025, NOTE-026, NOTE-027
+Description:: Implement `update(input: UpdateNoteInput): Note | null`. Build dynamic UPDATE SET clause for only the provided mutable fields (title, content, tags, context_url, parent_note_id). Always set updated_at to current timestamp. Add `WHERE note_id = ? AND deleted_at IS NULL`. If no row updated, return null. Update FTS5 row (delete old, insert new) if title or content changed. Return complete updated note record.
+
+* [ ] TASK-008: Implement NoteRepository.softDelete [parallel]
++
+Components:: src/repository/note-repository.ts
+Stories:: US-005
+Specs:: NOTE-028, NOTE-029, NOTE-030, NOTE-031
+Description:: Implement `softDelete(noteId: string): { noteId: string; deletedAt: string } | null`. First check if note exists at all (query without deleted_at filter). If not found, return null. If already deleted (deleted_at is set), throw a distinct error. Set `deleted_at = current timestamp WHERE note_id = ? AND deleted_at IS NULL`. Delete the corresponding FTS5 row. Return { noteId, deletedAt }.
+
+* [ ] TASK-009: Implement NoteRepository.search [parallel]
++
+Components:: src/repository/note-repository.ts
+Stories:: US-006
+Specs:: NOTE-032, NOTE-033, NOTE-034, NOTE-035, NOTE-036
+Description:: Implement `search(query: string): Note[]`. Query FTS5 table joined with notes table: `SELECT notes.* FROM notes_fts JOIN notes ON notes.rowid = notes_fts.rowid WHERE notes_fts MATCH ? AND notes.deleted_at IS NULL ORDER BY notes_fts.rank`. FTS5's unicode61 tokenizer handles case folding (NOTE-033). Return matching notes ordered by relevance. Return empty array if no matches.
+
+== Phase 3: MCP Tool Handlers
+
+Implement each MCP tool handler that delegates to NoteRepository.
+
+* [ ] TASK-010: Implement create_note tool handler [parallel]
++
+Components:: src/tools/create-note.ts
+Stories:: US-001
+Specs:: NOTE-001, NOTE-004, NOTE-005, NOTE-006, NOTE-007
+Description:: Export tool definition (name, description, Zod input schema) and handler function. Handler validates input via Zod schema. If parent_note_id provided, call repo.getById to verify parent exists -- return error if null. Call repo.create. Return complete note record as JSON in MCP tool result format.
+
+* [ ] TASK-011: Implement get_note, list_notes, search_notes tool handlers [parallel]
++
+Components:: src/tools/get-note.ts, src/tools/list-notes.ts, src/tools/search-notes.ts
+Stories:: US-002, US-003, US-006
+Specs:: NOTE-008, NOTE-009, NOTE-010, NOTE-011 through NOTE-018, NOTE-032 through NOTE-036
+Description:: Three read-only tool handlers. `get_note`: validate note_id, call repo.getById, return note or not-found error. `list_notes`: validate optional filters, call repo.list, return array. `search_notes`: validate query string, call repo.search, return array. Each exports tool definition and handler.
+
+* [ ] TASK-012: Implement update_note and delete_note tool handlers [parallel]
++
+Components:: src/tools/update-note.ts, src/tools/delete-note.ts
+Stories:: US-004, US-005
+Specs:: NOTE-019 through NOTE-027, NOTE-028 through NOTE-031
+Description:: Two mutation tool handlers. `update_note`: validate input, check note exists (repo.getById), if parent_note_id provided check parent exists (repo.getById), call repo.update, return updated note or error. `delete_note`: validate note_id, call repo.softDelete, handle not-found and already-deleted errors distinctly, return confirmation. Each exports tool definition and handler.
+
+== Phase 4: Server Integration
+
+Wire everything together into the runnable MCP server.
+
+* [ ] TASK-013: Implement MCP server entry point [sequential]
++
+Components:: src/index.ts
+Stories:: (all -- integration)
+Specs:: (all -- the server is how all specs are exposed)
+Description:: Create the main entry point. Read `NOTETAKER_DB_PATH` from environment (default: `~/.local/share/mcp-notetaker/notes.db`). Create the database directory if it does not exist. Instantiate NoteRepository. Create MCP `Server` instance with server name and version. Register all 6 tools (import definitions and handlers from src/tools/). Connect the server to stdio transport. Handle graceful shutdown (close DB on process exit). Add shebang line for direct execution. Update package.json `bin` field to point to compiled entry point.
+
+== Traceability
+
+[cols="1,1,1", options="header"]
+|===
+| Story | Spec IDs | Tasks
+
+| US-001: Create a Note
+| NOTE-001, NOTE-002, NOTE-003, NOTE-004, NOTE-005, NOTE-006, NOTE-007
+| TASK-001, TASK-002, TASK-003, TASK-004, TASK-010, TASK-013
+
+| US-002: Retrieve a Note
+| NOTE-008, NOTE-009, NOTE-010
+| TASK-003, TASK-005, TASK-011, TASK-013
+
+| US-003: List and Filter Notes
+| NOTE-011, NOTE-012, NOTE-013, NOTE-014, NOTE-015, NOTE-016, NOTE-017, NOTE-018
+| TASK-002, TASK-003, TASK-006, TASK-011, TASK-013
+
+| US-004: Update a Note
+| NOTE-019, NOTE-020, NOTE-021, NOTE-022, NOTE-023, NOTE-024, NOTE-025, NOTE-026, NOTE-027
+| TASK-002, TASK-003, TASK-007, TASK-012, TASK-013
+
+| US-005: Delete a Note (Soft-Delete)
+| NOTE-028, NOTE-029, NOTE-030, NOTE-031
+| TASK-003, TASK-008, TASK-012, TASK-013
+
+| US-006: Search Notes by Content
+| NOTE-032, NOTE-033, NOTE-034, NOTE-035, NOTE-036
+| TASK-003, TASK-009, TASK-011, TASK-013
+|===

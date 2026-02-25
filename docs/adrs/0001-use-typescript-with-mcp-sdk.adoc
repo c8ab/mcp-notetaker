@@ -1,0 +1,30 @@
+= ADR-0001: Use TypeScript with the Official MCP SDK
+:status: Accepted
+:date: 2026-02-25
+:deciders: User, AI Agent
+
+== Context
+
+The system is a Model Context Protocol (MCP) server that exposes tools for managing atomic notes. An MCP server requires an SDK that implements the MCP transport protocol (stdio, SSE). The choice of language and SDK determines the development experience, ecosystem maturity, and deployment characteristics.
+
+== Decision
+
+Use TypeScript as the implementation language with the official `@modelcontextprotocol/sdk` package for MCP server functionality.
+
+The project will use Node.js as the runtime. TypeScript provides static type safety for the tool parameter schemas and note data structures. The build target will be ESM.
+
+== Consequences
+
+* Most mature MCP SDK with the widest adoption and best documentation.
+* Strong type safety for tool input/output schemas via Zod integration.
+* Access to the full npm ecosystem for SQLite drivers, UUID generation, and testing.
+* Requires a build step (TypeScript compilation) before running.
+* Node.js runtime is heavier than a single Go binary for distribution.
+
+== Alternatives Considered
+
+=== Go with mcp-go
+The Go MCP SDK is less mature. While Go produces single binaries ideal for distribution, the SDK has fewer examples and less community support. Rejected due to SDK maturity concerns.
+
+=== Python with official mcp SDK
+Python has a good MCP SDK, but the runtime is heavier and dependency management (virtualenvs) adds complexity for end-user installation. Rejected due to distribution complexity.

@@ -1,0 +1,438 @@
+= Specification: Note Management
+:version: 1.0.0
+:source-stories-version: 1.0.0
+:last-updated: 2026-02-25
+:feature: note-management
+:prefix: NOTE
+:toc:
+
+// -------------------------------------------------------------------
+// Create
+// -------------------------------------------------------------------
+
+== NOTE-001
+The system shall accept a note creation request containing title, content, session_id, user_id, and agent fields.
+
+Type:: Ubiquitous
+Source:: US-001: Create a Note, Criterion 1
+Verification:: Submit a note creation request with all required fields populated. Confirm the system accepts the request and creates the note.
+
+== NOTE-002
+The system shall generate a unique note_id for each created note.
+
+Type:: Ubiquitous
+Source:: US-001: Create a Note, Criterion 2
+Verification:: Create two notes. Confirm that each receives a distinct note_id.
+
+== NOTE-003
+The system shall record created_at and updated_at timestamps in ISO 8601 format when a note is created.
+
+Type:: Ubiquitous
+Source:: US-001: Create a Note, Criterion 3
+Verification:: Create a note. Confirm the returned record contains created_at and updated_at fields in ISO 8601 format and that both values reflect the current time.
+
+== NOTE-004
+When the caller provides optional fields (tags, parent_note_id, context_url) during note creation, the system shall store them with the note.
+
+Type:: Event-driven
+Source:: US-001: Create a Note, Criterion 4
+Verification:: Create a note with tags, parent_note_id, and context_url. Retrieve the note. Confirm all optional fields are present in the returned record.
+
+== NOTE-005
+When the caller provides a parent_note_id during note creation, the system shall verify the referenced note exists before creating the note.
+
+Type:: Event-driven
+Source:: US-001: Create a Note, Criterion 5
+Verification:: Create a note with a parent_note_id referencing an existing note. Confirm creation succeeds. Retrieve the created note. Confirm parent_note_id is set correctly.
+
+== NOTE-006
+If the parent_note_id provided during note creation does not reference an existing note, then the system shall reject the request with an error indicating the parent note was not found.
+
+Type:: Unwanted behavior
+Source:: US-001: Create a Note, Criterion 6
+Verification:: Attempt to create a note with a parent_note_id that does not exist. Confirm the system returns an error indicating the parent note was not found and no note is created.
+
+== NOTE-007
+When a note is created successfully, the system shall return the complete note record including all generated fields.
+
+Type:: Event-driven
+Source:: US-001: Create a Note, Criterion 7
+Verification:: Create a note. Confirm the response contains note_id, title, content, session_id, user_id, agent, created_at, updated_at, and any optional fields that were provided.
+
+// -------------------------------------------------------------------
+// Retrieve
+// -------------------------------------------------------------------
+
+== NOTE-008
+When the caller requests a note by note_id, the system shall return the complete note record.
+
+Type:: Event-driven
+Source:: US-002: Retrieve a Note, Criterion 1
+Verification:: Create a note. Request that note by its note_id. Confirm the returned record matches all fields of the created note.
+
+== NOTE-009
+If the requested note_id does not exist, then the system shall return an error indicating the note was not found.
+
+Type:: Unwanted behavior
+Source:: US-002: Retrieve a Note, Criterion 2
+Verification:: Request a note with a note_id that was never created. Confirm the system returns a not-found error.
+
+== NOTE-010
+If the requested note has been soft-deleted, then the system shall return an error indicating the note was not found.
+
+Type:: Unwanted behavior
+Source:: US-002: Retrieve a Note, Criteria 3-4
+Verification:: Create a note, soft-delete it, then request it by note_id. Confirm the system returns a not-found error.
+
+// -------------------------------------------------------------------
+// List and Filter
+// -------------------------------------------------------------------
+
+== NOTE-011
+The system shall return a list of non-deleted notes when no filters are provided.
+
+Type:: Ubiquitous
+Source:: US-003: List and Filter Notes, Criterion 1
+Verification:: Create several notes. List notes without filters. Confirm all non-deleted notes are returned.
+
+== NOTE-012
+When the caller provides a session_id filter, the system shall return only notes belonging to that session.
+
+Type:: Event-driven
+Source:: US-003: List and Filter Notes, Criterion 2
+Verification:: Create notes across two different sessions. List notes filtered by one session_id. Confirm only notes from that session are returned.
+
+== NOTE-013
+When the caller provides a user_id filter, the system shall return only notes created by that user.
+
+Type:: Event-driven
+Source:: US-003: List and Filter Notes, Criterion 3
+Verification:: Create notes with two different user_ids. List notes filtered by one user_id. Confirm only notes from that user are returned.
+
+== NOTE-014
+When the caller provides an agent filter, the system shall return only notes from that agent.
+
+Type:: Event-driven
+Source:: US-003: List and Filter Notes, Criterion 4
+Verification:: Create notes from two different agents. List notes filtered by one agent. Confirm only notes from that agent are returned.
+
+== NOTE-015
+When the caller provides a tags filter, the system shall return only notes that contain all specified tags.
+
+Type:: Event-driven
+Source:: US-003: List and Filter Notes, Criterion 5
+Verification:: Create notes with varying tags. List notes filtered by a set of tags. Confirm only notes containing all specified tags are returned.
+
+== NOTE-016
+When the caller provides a parent_note_id filter, the system shall return only direct child notes of that parent.
+
+Type:: Event-driven
+Source:: US-003: List and Filter Notes, Criterion 6
+Verification:: Create a parent note and two child notes referencing it. Create a third note with no parent. List notes filtered by parent_note_id. Confirm only the two child notes are returned.
+
+== NOTE-017
+The system shall not include soft-deleted notes in list results.
+
+Type:: Ubiquitous
+Source:: US-003: List and Filter Notes, Criterion 7
+Verification:: Create several notes, soft-delete one. List notes. Confirm the soft-deleted note does not appear in the results.
+
+== NOTE-018
+The system shall return listed notes ordered by creation time, newest first.
+
+Type:: Ubiquitous
+Source:: US-003: List and Filter Notes, Criterion 8
+Verification:: Create three notes at different times. List notes. Confirm the results are ordered with the most recently created note first.
+
+// -------------------------------------------------------------------
+// Update
+// -------------------------------------------------------------------
+
+== NOTE-019
+When the caller provides a note_id and updated fields, the system shall apply the changes to the specified note.
+
+Type:: Event-driven
+Source:: US-004: Update a Note, Criterion 1
+Verification:: Create a note. Update its title and content. Retrieve the note. Confirm the title and content reflect the new values.
+
+== NOTE-020
+The system shall allow updating title, content, tags, context_url, and parent_note_id fields.
+
+Type:: Ubiquitous
+Source:: US-004: Update a Note, Criterion 2
+Verification:: Create a note. Update each of: title, content, tags, context_url, and parent_note_id individually. Confirm each update is accepted and persisted.
+
+== NOTE-021
+The system shall not allow updating note_id, session_id, user_id, agent, or created_at fields.
+
+Type:: Ubiquitous
+Source:: US-004: Update a Note, Criterion 3
+Verification:: Create a note. Attempt to update session_id, user_id, agent, and created_at. Confirm the system either rejects the attempt or ignores the immutable fields, and their values remain unchanged.
+
+== NOTE-022
+When a note is updated, the system shall set updated_at to the current timestamp.
+
+Type:: Event-driven
+Source:: US-004: Update a Note, Criterion 4
+Verification:: Create a note and record its updated_at. Wait, then update the note. Confirm the updated_at value has changed to a more recent timestamp.
+
+== NOTE-023
+If the note_id provided for update does not exist, then the system shall return an error indicating the note was not found.
+
+Type:: Unwanted behavior
+Source:: US-004: Update a Note, Criterion 5
+Verification:: Attempt to update a note with a note_id that was never created. Confirm the system returns a not-found error.
+
+== NOTE-024
+If the note targeted for update has been soft-deleted, then the system shall return an error indicating the note was not found.
+
+Type:: Unwanted behavior
+Source:: US-004: Update a Note, Criterion 6
+Verification:: Create a note, soft-delete it, then attempt to update it. Confirm the system returns a not-found error.
+
+== NOTE-025
+When a parent_note_id is provided in an update request, the system shall verify the referenced note exists.
+
+Type:: Event-driven
+Source:: US-004: Update a Note, Criterion 7
+Verification:: Create two notes. Update the first to set parent_note_id to the second. Confirm the update succeeds and the parent_note_id is stored.
+
+== NOTE-026
+If the parent_note_id provided in an update request does not reference an existing note, then the system shall reject the update with an error indicating the parent note was not found.
+
+Type:: Unwanted behavior
+Source:: US-004: Update a Note, Criterion 8
+Verification:: Create a note. Attempt to update it with a parent_note_id that does not exist. Confirm the system returns an error and the note is not modified.
+
+== NOTE-027
+When a note is updated successfully, the system shall return the complete updated note record.
+
+Type:: Event-driven
+Source:: US-004: Update a Note, Criterion 9
+Verification:: Create and update a note. Confirm the response contains all fields with the updated values.
+
+// -------------------------------------------------------------------
+// Soft-Delete
+// -------------------------------------------------------------------
+
+== NOTE-028
+When the caller requests deletion of a note by note_id, the system shall mark the note as deleted without permanently removing it.
+
+Type:: Event-driven
+Source:: US-005: Delete a Note, Criteria 1-2
+Verification:: Create a note. Delete it. Confirm the system reports successful deletion. Confirm the note is no longer returned by retrieve or list operations.
+
+== NOTE-029
+If the note_id provided for deletion does not exist, then the system shall return an error indicating the note was not found.
+
+Type:: Unwanted behavior
+Source:: US-005: Delete a Note, Criterion 3
+Verification:: Attempt to delete a note with a note_id that was never created. Confirm the system returns a not-found error.
+
+== NOTE-030
+If the note targeted for deletion has already been soft-deleted, then the system shall return an error indicating the note was already deleted.
+
+Type:: Unwanted behavior
+Source:: US-005: Delete a Note, Criterion 4
+Verification:: Create a note. Delete it. Attempt to delete it again. Confirm the system returns an error indicating the note was already deleted.
+
+== NOTE-031
+When a note is soft-deleted successfully, the system shall return a confirmation with the note_id and the deletion timestamp.
+
+Type:: Event-driven
+Source:: US-005: Delete a Note, Criterion 5
+Verification:: Create and delete a note. Confirm the deletion response contains the note_id and a deletion timestamp.
+
+// -------------------------------------------------------------------
+// Search
+// -------------------------------------------------------------------
+
+== NOTE-032
+When the caller provides a search query, the system shall return notes whose title or content matches the query.
+
+Type:: Event-driven
+Source:: US-006: Search Notes by Content, Criterion 1
+Verification:: Create notes with known text in title and content. Search for a term present in one note's title and another note's content. Confirm both matching notes are returned.
+
+== NOTE-033
+The system shall perform case-insensitive matching when searching notes.
+
+Type:: Ubiquitous
+Source:: US-006: Search Notes by Content, Criterion 2
+Verification:: Create a note containing "Architecture". Search for "architecture" (lowercase). Confirm the note is returned.
+
+== NOTE-034
+The system shall not include soft-deleted notes in search results.
+
+Type:: Ubiquitous
+Source:: US-006: Search Notes by Content, Criterion 3
+Verification:: Create a note with searchable text. Soft-delete it. Search for that text. Confirm the deleted note does not appear in results.
+
+== NOTE-035
+When no notes match the search query, the system shall return an empty list.
+
+Type:: Event-driven
+Source:: US-006: Search Notes by Content, Criterion 4
+Verification:: Search for a term that does not appear in any note. Confirm the system returns an empty list.
+
+== NOTE-036
+The system shall return search results ordered by relevance.
+
+Type:: Ubiquitous
+Source:: US-006: Search Notes by Content, Criterion 5
+Verification:: Create notes with varying degrees of match to a search term. Search for that term. Confirm results are ordered with the strongest matches first.
+
+// -------------------------------------------------------------------
+// Traceability
+// -------------------------------------------------------------------
+
+== Traceability
+
+[cols="1,2,2", options="header"]
+|===
+| Requirement ID | Requirement Summary | Source
+
+| NOTE-001
+| Accept note creation with required fields
+| US-001: Criterion 1
+
+| NOTE-002
+| Generate unique note_id
+| US-001: Criterion 2
+
+| NOTE-003
+| Record ISO 8601 timestamps at creation
+| US-001: Criterion 3
+
+| NOTE-004
+| Store optional fields when provided
+| US-001: Criterion 4
+
+| NOTE-005
+| Verify parent note exists on create
+| US-001: Criterion 5
+
+| NOTE-006
+| Reject create when parent note missing
+| US-001: Criterion 6
+
+| NOTE-007
+| Return complete record on create
+| US-001: Criterion 7
+
+| NOTE-008
+| Return complete record on retrieve
+| US-002: Criterion 1
+
+| NOTE-009
+| Not-found error for missing note_id
+| US-002: Criterion 2
+
+| NOTE-010
+| Not-found error for soft-deleted note
+| US-002: Criteria 3-4
+
+| NOTE-011
+| List non-deleted notes unfiltered
+| US-003: Criterion 1
+
+| NOTE-012
+| Filter by session_id
+| US-003: Criterion 2
+
+| NOTE-013
+| Filter by user_id
+| US-003: Criterion 3
+
+| NOTE-014
+| Filter by agent
+| US-003: Criterion 4
+
+| NOTE-015
+| Filter by tags (all match)
+| US-003: Criterion 5
+
+| NOTE-016
+| Filter by parent_note_id
+| US-003: Criterion 6
+
+| NOTE-017
+| Exclude soft-deleted from list
+| US-003: Criterion 7
+
+| NOTE-018
+| List ordered newest first
+| US-003: Criterion 8
+
+| NOTE-019
+| Apply changes on update
+| US-004: Criterion 1
+
+| NOTE-020
+| Updatable fields
+| US-004: Criterion 2
+
+| NOTE-021
+| Immutable fields
+| US-004: Criterion 3
+
+| NOTE-022
+| Update updated_at on modification
+| US-004: Criterion 4
+
+| NOTE-023
+| Not-found error on update missing note
+| US-004: Criterion 5
+
+| NOTE-024
+| Not-found error on update deleted note
+| US-004: Criterion 6
+
+| NOTE-025
+| Verify parent note exists on update
+| US-004: Criterion 7
+
+| NOTE-026
+| Reject update when parent note missing
+| US-004: Criterion 8
+
+| NOTE-027
+| Return complete record on update
+| US-004: Criterion 9
+
+| NOTE-028
+| Soft-delete without permanent removal
+| US-005: Criteria 1-2
+
+| NOTE-029
+| Not-found error on delete missing note
+| US-005: Criterion 3
+
+| NOTE-030
+| Already-deleted error on re-delete
+| US-005: Criterion 4
+
+| NOTE-031
+| Return confirmation on delete
+| US-005: Criterion 5
+
+| NOTE-032
+| Search by title and content
+| US-006: Criterion 1
+
+| NOTE-033
+| Case-insensitive search
+| US-006: Criterion 2
+
+| NOTE-034
+| Exclude soft-deleted from search
+| US-006: Criterion 3
+
+| NOTE-035
+| Empty list when no search matches
+| US-006: Criterion 4
+
+| NOTE-036
+| Search results ordered by relevance
+| US-006: Criterion 5
+|===

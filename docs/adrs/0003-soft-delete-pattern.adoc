@@ -1,0 +1,34 @@
+= ADR-0003: Soft-Delete Pattern for Notes
+:status: Accepted
+:date: 2026-02-25
+:deciders: User, AI Agent
+
+== Context
+
+Notes must be deletable by users, but the system should preserve an audit trail. A note taken during a working session may be deleted by mistake, or may be needed later for context. The deletion strategy affects data recovery, query patterns, and storage growth.
+
+== Decision
+
+Implement soft-delete using a `deleted_at` column on the notes table. When a note is deleted:
+
+* The `deleted_at` column is set to the current ISO 8601 timestamp.
+* The note remains in the database but is excluded from all read operations (get, list, search) by default.
+* A note with a non-null `deleted_at` cannot be updated or re-deleted.
+
+No purge/hard-delete operation is provided in the initial implementation.
+
+== Consequences
+
+* Notes are recoverable (the data is preserved).
+* All queries must include a `WHERE deleted_at IS NULL` filter, enforced at the data access layer.
+* Storage grows over time since deleted notes are never removed.
+* Simplifies auditing -- the full history of notes is preserved.
+* Future enhancement: a purge operation could be added if storage growth becomes a concern.
+
+== Alternatives Considered
+
+=== Hard-delete
+Permanently removes data. Simpler implementation but no recovery path. Rejected because auditability and recoverability are valued for a note-taking tool.
+
+=== Both (soft-delete + purge)
+Adds a separate purge tool for permanent removal. Deferred to a future enhancement -- the initial system focuses on core CRUD with soft-delete.
