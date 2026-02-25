@@ -1,0 +1,200 @@
+= System Architecture
+:version: 1.0.0
+:last-updated: 2026-02-25
+:toc:
+
+== Feature Design Sources
+
+[cols="1,1", options="header"]
+|===
+| Feature | Design Version
+
+| note-management | 1.0.1
+|===
+
+== Overview
+
+MCP Notetaker is a Model Context Protocol (MCP) server that provides tools for recording, retrieving, and managing atomic notes. It is designed to run locally alongside AI-powered development tools (Claude Desktop, VS Code with Copilot, CLI agents) and persist notes in a SQLite database on the user's machine.
+
+The system is a single-process Node.js application that communicates with MCP clients over stdio using the JSON-RPC-based MCP protocol. It exposes six tools for CRUD operations and full-text search on notes.
+
+== System Context (C4 Level 1)
+
+The MCP Notetaker server sits between AI agents (which generate notes) and the local filesystem (where notes are persisted).
+
+[source,mermaid]
+----
+C4Context
+  title System Context Diagram -- MCP Notetaker
+
+  Person(user, "Developer", "Uses AI agents that record notes during working sessions")
+
+  System(notetaker, "MCP Notetaker", "MCP server providing tools for atomic note CRUD and search")
+
+  System_Ext(mcpclient, "MCP Client", "AI agent host: Claude Desktop, VS Code, CLI tool")
+  System_Ext(filesystem, "Local Filesystem", "Stores the SQLite database file")
+
+  Rel(user, mcpclient, "Interacts with")
+  Rel(mcpclient, notetaker, "Invokes tools via MCP protocol", "stdio / JSON-RPC")
+  Rel(notetaker, filesystem, "Reads/writes notes database", "SQLite file I/O")
+----
+
+== Container View (C4 Level 2)
+
+The system consists of a single runtime container (the Node.js MCP server process) and a single data store (the SQLite database file).
+
+[source,mermaid]
+----
+C4Container
+  title Container Diagram -- MCP Notetaker
+
+  Person(user, "Developer", "Uses AI agents")
+
+  System_Ext(mcpclient, "MCP Client", "Agent host application")
+
+  System_Boundary(notetaker, "MCP Notetaker") {
+    Container(server, "MCP Server", "Node.js / TypeScript", "Handles MCP protocol, registers tools, routes requests to handlers")
+    ContainerDb(db, "Notes Database", "SQLite + FTS5", "Stores notes with metadata, tags, threading; full-text search index")
+  }
+
+  Rel(mcpclient, server, "tools/call, tools/list", "stdio / JSON-RPC")
+  Rel(server, db, "CRUD + FTS queries", "better-sqlite3 (synchronous)")
+----
+
+== Component View (C4 Level 3)
+
+The MCP server container has three internal layers: the protocol layer, tool handlers, and the data access layer.
+
+[source,mermaid]
+----
+C4Component
+  title Component Diagram -- MCP Server
+
+  Container_Boundary(server, "MCP Server") {
+    Component(mcp, "MCP Protocol Layer", "@modelcontextprotocol/sdk", "Handles JSON-RPC message routing, tool registration, stdio transport")
+    Component(tools, "Tool Handlers", "TypeScript", "Six handlers: create_note, get_note, list_notes, update_note, delete_note, search_notes. Validate input via Zod, format MCP responses.")
+    Component(repo, "NoteRepository", "TypeScript + better-sqlite3", "Encapsulates all SQLite operations: schema init, CRUD, FTS5 sync, UUID v7 generation, tag querying via json_each")
+  }
+
+  ContainerDb(db, "SQLite Database", "SQLite 3 + FTS5", "notes table, notes_fts virtual table, 6 indexes")
+
+  Rel(mcp, tools, "Dispatches tool calls")
+  Rel(tools, repo, "Calls repository methods")
+  Rel(repo, db, "Prepared statements, transactions")
+----
+
+=== MCP Protocol Layer
+
+The `McpServer` class from `@modelcontextprotocol/sdk` handles:
+
+* MCP protocol negotiation (`initialize` handshake)
+* Tool capability advertisement (`tools/list`)
+* Request routing (`tools/call` dispatches to registered handlers)
+* stdio transport (JSON-RPC over stdin/stdout)
+
+Configuration is minimal. The entry point (`src/index.ts`) creates the server, registers all six tools, and connects to the stdio transport.
+
+=== Tool Handlers
+
+Six handler modules in `src/tools/`, one per MCP tool. Each handler:
+
+1. Receives validated input (Zod schema validation is handled by the SDK)
+2. Calls the appropriate NoteRepository method
+3. Catches typed errors (`ParentNoteNotFoundError`, `NoteAlreadyDeletedError`) and returns `isError: true` MCP results
+4. Returns JSON-serialized note records in `content[].text`
+
+Handlers are deliberately thin -- they contain no business logic beyond input mapping and error formatting.
+
+=== NoteRepository
+
+A single class (`src/repository/note-repository.ts`) encapsulating all database operations:
+
+* **Schema initialization:** Idempotent `CREATE TABLE IF NOT EXISTS` for the notes table, 6 indexes, and the FTS5 virtual table. WAL mode and foreign keys enabled on connection.
+* **Prepared statements:** Frequently-used queries (insert, getById, softDelete, FTS operations) are prepared once on construction.
+* **UUID v7 generation:** Custom implementation generating RFC 9562 UUID v7 identifiers with 48-bit millisecond timestamps for time-sortable primary keys.
+* **FTS5 sync:** The `notes_fts` contentless FTS5 table is kept in sync at the application level -- rows are inserted on create, delete+re-insert on update, and deleted on soft-delete.
+* **Tag querying:** Uses `json_each()` with AND semantics for tag filtering.
+* **Transactions:** Create, update, and soft-delete operations use SQLite transactions to ensure atomicity between the notes table and FTS5 table.
+
+== Technology Stack
+
+[cols="1,2,2", options="header"]
+|===
+| Category | Technology | Rationale
+
+| Language
+| TypeScript (ES2022, ESM)
+| <<adrs/0001-use-typescript-with-mcp-sdk.adoc#,ADR-0001>>: Most mature MCP SDK, strong type safety
+
+| Runtime
+| Node.js >= 20
+| Required for ESM support and `crypto.getRandomValues`
+
+| MCP SDK
+| @modelcontextprotocol/sdk
+| <<adrs/0001-use-typescript-with-mcp-sdk.adoc#,ADR-0001>>: Official SDK, Zod integration
+
+| Database
+| SQLite via better-sqlite3
+| <<adrs/0002-use-sqlite-with-better-sqlite3.adoc#,ADR-0002>>: Serverless, synchronous API
+
+| Full-text search
+| SQLite FTS5
+| <<adrs/0002-use-sqlite-with-better-sqlite3.adoc#,ADR-0002>>: Built-in, no external service
+
+| Validation
+| Zod
+| Used by MCP SDK for tool input schema validation
+
+| Identifiers
+| UUID v7 (RFC 9562)
+| <<adrs/0004-uuid-v7-for-note-identifiers.adoc#,ADR-0004>>: Time-sortable, B-tree efficient
+
+| Deletion strategy
+| Soft-delete (deleted_at column)
+| <<adrs/0003-soft-delete-pattern.adoc#,ADR-0003>>: Preserves audit history
+
+| Test framework
+| Vitest
+| Fast, ESM-native, compatible with TypeScript
+
+| Build
+| TypeScript compiler (tsc)
+| Compiles to dist/ for Node.js execution
+|===
+
+== Data Architecture
+
+A single SQLite database file stores all data. Default location: `~/.local/share/mcp-notetaker/notes.db` (configurable via `NOTETAKER_DB_PATH` environment variable).
+
+=== Notes table
+
+The primary table stores all note records with 12 columns:
+
+* **Identity:** `note_id` (UUID v7, primary key)
+* **Attribution:** `session_id`, `user_id`, `agent` (immutable after creation)
+* **Content:** `title` (optional), `content` (AsciiDoc, required)
+* **Relationships:** `parent_note_id` (self-referential FK for threading)
+* **Metadata:** `context_url`, `tags` (JSON array in TEXT column)
+* **Timestamps:** `created_at`, `updated_at`, `deleted_at` (ISO 8601)
+
+Six indexes support the primary query patterns: filtering by session, user, agent, parent, creation time, and deletion status.
+
+=== FTS5 virtual table
+
+`notes_fts` is a contentless FTS5 virtual table indexing `title` and `content` columns. It uses the `unicode61` tokenizer for case-insensitive matching. The table is synced by the application layer (not triggers) to ensure soft-deleted notes are excluded from the search index.
+
+=== Data flow
+
+[source,mermaid]
+----
+flowchart LR
+  CLIENT[MCP Client] -->|"tool call (JSON-RPC)"| SERVER[MCP Server]
+  SERVER -->|"parse + validate (Zod)"| HANDLER[Tool Handler]
+  HANDLER -->|"method call"| REPO[NoteRepository]
+  REPO -->|"SQL (prepared stmt)"| NOTES[(notes table)]
+  REPO -->|"FTS sync"| FTS[(notes_fts)]
+  REPO -->|"Note object"| HANDLER
+  HANDLER -->|"JSON response"| SERVER
+  SERVER -->|"tool result (JSON-RPC)"| CLIENT
+----
