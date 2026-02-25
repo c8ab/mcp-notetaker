@@ -41,42 +41,42 @@ Description:: Create `NoteRepository` class. Constructor accepts a database file
 
 Implement all data access methods on NoteRepository.
 
-* [ ] TASK-004: Implement NoteRepository.create [sequential]
+* [x] TASK-004: Implement NoteRepository.create [sequential]
 +
 Components:: src/repository/note-repository.ts
 Stories:: US-001
 Specs:: NOTE-001, NOTE-002, NOTE-003, NOTE-004, NOTE-005, NOTE-006, NOTE-007
 Description:: Implement `create(input: CreateNoteInput): Note`. Generate UUID v7 for note_id. Set created_at and updated_at to current ISO 8601 timestamp. Insert row into notes table. Insert corresponding row into notes_fts (title, content). Return complete note record. Use prepared statements.
 
-* [ ] TASK-005: Implement NoteRepository.getById [parallel]
+* [x] TASK-005: Implement NoteRepository.getById [parallel]
 +
 Components:: src/repository/note-repository.ts
 Stories:: US-002
 Specs:: NOTE-008, NOTE-009, NOTE-010
 Description:: Implement `getById(noteId: string): Note | null`. Query notes table with `WHERE note_id = ? AND deleted_at IS NULL`. Return the note record or null. Use prepared statement.
 
-* [ ] TASK-006: Implement NoteRepository.list [parallel]
+* [x] TASK-006: Implement NoteRepository.list [parallel]
 +
 Components:: src/repository/note-repository.ts
 Stories:: US-003
 Specs:: NOTE-011, NOTE-012, NOTE-013, NOTE-014, NOTE-015, NOTE-016, NOTE-017, NOTE-018
 Description:: Implement `list(filters: ListNotesInput): Note[]`. Build dynamic SQL query starting from `SELECT * FROM notes WHERE deleted_at IS NULL`. Append conditions for each provided filter: session_id, user_id, agent (exact match), parent_note_id (exact match), tags (subquery using `json_each()` with AND semantics -- count of matching tags equals count of requested tags). Append `ORDER BY created_at DESC`. Return array of note records.
 
-* [ ] TASK-007: Implement NoteRepository.update [parallel]
+* [x] TASK-007: Implement NoteRepository.update [parallel]
 +
 Components:: src/repository/note-repository.ts
 Stories:: US-004
 Specs:: NOTE-019, NOTE-020, NOTE-021, NOTE-022, NOTE-025, NOTE-026, NOTE-027
 Description:: Implement `update(input: UpdateNoteInput): Note | null`. Build dynamic UPDATE SET clause for only the provided mutable fields (title, content, tags, context_url, parent_note_id). Always set updated_at to current timestamp. Add `WHERE note_id = ? AND deleted_at IS NULL`. If no row updated, return null. Update FTS5 row (delete old, insert new) if title or content changed. Return complete updated note record.
 
-* [ ] TASK-008: Implement NoteRepository.softDelete [parallel]
+* [x] TASK-008: Implement NoteRepository.softDelete [parallel]
 +
 Components:: src/repository/note-repository.ts
 Stories:: US-005
 Specs:: NOTE-028, NOTE-029, NOTE-030, NOTE-031
 Description:: Implement `softDelete(noteId: string): { noteId: string; deletedAt: string } | null`. First check if note exists at all (query without deleted_at filter). If not found, return null. If already deleted (deleted_at is set), throw a distinct error. Set `deleted_at = current timestamp WHERE note_id = ? AND deleted_at IS NULL`. Delete the corresponding FTS5 row. Return { noteId, deletedAt }.
 
-* [ ] TASK-009: Implement NoteRepository.search [parallel]
+* [x] TASK-009: Implement NoteRepository.search [parallel]
 +
 Components:: src/repository/note-repository.ts
 Stories:: US-006
