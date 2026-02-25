@@ -1,0 +1,175 @@
+= Implementation Example
+
+This file walks through implementing Phase 1 (Foundation) of the shopping-cart feature task list. It demonstrates the per-phase cycle: build todo list, implement tasks, verify, commit, ask to continue.
+
+== Context
+
+Given:
+
+* `docs/features/shopping-cart/tasks.adoc` at version `1.0.0` with 3 phases, 9 tasks
+* `docs/features/shopping-cart/design.adoc` at version `1.0.0` with system design for cart management
+* `docs/features/shopping-cart/data-model.adoc` at version `1.0.0` with entities: Cart, CartItem
+* No tasks are ticked yet -- starting from Phase 1
+
+== Step 1: Read Inputs
+
+Read `docs/features/shopping-cart/tasks.adoc` -- status is `Current`, source-design-version is `1.0.0`. Proceed.
+
+Read `docs/features/shopping-cart/design.adoc` -- extract system design (frontend components, CartService, API routes), story resolution mappings, and architecture constraint (business logic in service layer).
+
+Read `docs/features/shopping-cart/data-model.adoc` -- extract Cart and CartItem entity definitions.
+
+== Step 2: Check for Existing Progress
+
+No tasks are ticked. Start from Phase 1.
+
+== Step 3: Build Phase Todo List (Phase 1: Foundation)
+
+Parse Phase 1 from the feature's tasks.adoc. It contains 1 task:
+
+....
+TodoWrite:
+- TASK-001: Create Cart and CartItem entities and migrations [pending]
+....
+
+== Step 4: Implement Current Phase
+
+=== TASK-001: Create Cart and CartItem entities and migrations [sequential]
+
+Mark TASK-001 as `in_progress` in the todo list.
+
+Read `data-model.adoc` for Cart and CartItem entity definitions. Implement:
+
+* Create `lib/db/migrations/004_create_carts.sql`:
++
+....
+CREATE TABLE carts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_carts_session_id ON carts(session_id);
+
+CREATE TABLE cart_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cart_id UUID NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id),
+  quantity INTEGER NOT NULL CHECK (quantity >= 1),
+  UNIQUE(cart_id, product_id)
+);
+
+CREATE INDEX idx_cart_items_cart_id ON cart_items(cart_id);
+....
+
+* Create `lib/models/cart.ts` with TypeScript types and basic query functions
+* Create `lib/models/cart-item.ts` with TypeScript types
+
+Mark TASK-001 as `completed` in the todo list. Tick `[x]` in `docs/features/shopping-cart/tasks.adoc`.
+
+== Step 5: Verify Phase
+
+Detect verification commands from `package.json`:
+
+....
+npm run build     # Next.js build -- passes
+npm run lint      # ESLint -- passes
+npm run typecheck # tsc --noEmit -- passes
+....
+
+All verification passes. Proceed to commit.
+
+== Step 6: Commit Phase
+
+Stage and commit:
+
+....
+git add .
+git commit -m "feat(shopping-cart): implement phase 1 -- Foundation
+
+- TASK-001: Create Cart and CartItem entities and migrations"
+....
+
+Commit succeeds.
+
+== Step 7: Ask to Continue
+
+Present question to user:
+
+....
+Question: Phase 1 (Foundation) is complete. 1 task implemented and verified. Continue?
+Options:
+- Continue to Phase 2: Backend
+- Stop here
+....
+
+User selects "Continue to Phase 2: Backend".
+
+Clear the todo list and create a new one with Phase 2 tasks:
+
+....
+TodoWrite:
+- TASK-002: Implement CartService with business logic [pending]
+- TASK-003: Implement POST /api/cart/items endpoint [pending]
+- TASK-004: Implement PATCH /api/cart/items/:id endpoint [pending]
+- TASK-005: Implement DELETE /api/cart/items/:id endpoint [pending]
+....
+
+Loop back to Step 4 for Phase 2.
+
+== Updated tasks.adoc After Phase 1
+
+....
+== Phase 1: Foundation
+
+Create database entities and migrations for cart persistence.
+
+* [x] TASK-001: Create Cart and CartItem entities and migrations [sequential]
++
+Components:: Database, Cart model, CartItem model
+Stories:: US-001, US-002
+Specs:: CART-001, CART-005
+Description:: Create Cart table and CartItem table...
+
+== Phase 2: Backend
+
+...tasks still unticked...
+....
+
+== Final State (After All Phases Complete)
+
+When the last phase is committed:
+
+1. Set the task list status to `Implemented`:
++
+....
+docs/features/shopping-cart/tasks.adoc  -> :status: Implemented
+....
+
+2. Detect design divergences -- compare what was built against the design. For each divergence, analyze both resolution directions (update design vs. fix code) and report to the orchestrator:
++
+....
+Design divergences for shopping-cart:
+
+  1. CartService validation placement
+     Design: Validation logic in CartService.addItem()
+     Implementation: Zod schema validation in POST /api/cart route handler
+     Reason: Zod schema validation at the API boundary is more idiomatic
+     Update design: Reflect route-level validation pattern
+     Fix code: Move validation into CartService
+
+No other divergences detected.
+....
++
+The orchestrator presents this to the user for decision. This skill does NOT modify `design.adoc` -- design updates are routed to `needs-design` by the orchestrator.
+
+3. Commit task status update:
++
+....
+git commit -m "chore(shopping-cart): mark implementation complete
+
+Set tasks status to Implemented."
+....
+
+Report to the orchestrator that the shopping-cart feature implementation is complete, along with the divergence report.

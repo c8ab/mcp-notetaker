@@ -1,0 +1,180 @@
+= Example: Feature Stories to Feature Specification
+
+:toc:
+
+== Part 1: Initial Creation
+
+=== Context
+
+The orchestrator has decomposed an e-commerce intent into three features. This example shows the specification for the `product-browsing` feature.
+
+=== Input
+
+`docs/features/product-browsing/user-stories.adoc` (version 1.0.0) containing:
+- US-001: View Product Catalog (4 criteria)
+- US-002: Search Products (4 criteria)
+
+=== Prefix Proposal
+
+```
+Proposed prefix for product-browsing: PROD
+
+Confirm or suggest alternative?
+```
+
+=== Output: docs/features/product-browsing/spec.adoc
+
+[source,asciidoc]
+----
+= Specification: Product Browsing
+:version: 1.0.0
+:source-stories-version: 1.0.0
+:last-updated: 2026-02-20
+:feature: product-browsing
+:prefix: PROD
+:toc:
+
+== PROD-001
+The system shall display products in a grid or list format.
+
+Type:: Ubiquitous
+Source:: US-001: View Product Catalog, Criterion 1
+Verification:: Navigate to the product listing page. Confirm that products are displayed in a grid or list layout.
+
+== PROD-002
+The system shall show the name, price, and image for each product in the listing.
+
+Type:: Ubiquitous
+Source:: US-001: View Product Catalog, Criterion 2
+Verification:: View the product listing. Confirm each product displays its name, price, and image.
+
+== PROD-003
+When the user selects a category filter, the system shall display only products in that category.
+
+Type:: Event-driven
+Source:: US-001: View Product Catalog, Criterion 3
+Verification:: Select a category filter. Confirm that only products in the selected category are displayed and the count reflects the filter.
+
+== PROD-004
+When the user selects a sort option, the system shall order products by the selected attribute.
+
+Type:: Event-driven
+Source:: US-001: View Product Catalog, Criterion 4
+Verification:: Select a sort option (e.g., price low-to-high). Confirm that products are reordered accordingly.
+
+== PROD-005
+The system shall provide a search input that accepts text queries.
+
+Type:: Ubiquitous
+Source:: US-002: Search Products, Criterion 1
+Verification:: Navigate to the product page. Confirm that a search input field is visible and accepts text.
+
+== PROD-006
+When the user submits a search query, the system shall display matching products.
+
+Type:: Event-driven
+Source:: US-002: Search Products, Criterion 2
+Verification:: Enter a search term matching known products. Confirm that matching products are displayed.
+
+== PROD-007
+When the user submits a search query that matches no products, the system shall display a helpful empty-state message.
+
+Type:: Event-driven
+Source:: US-002: Search Products, Criterion 3
+Verification:: Search for a term that matches no products. Confirm that a message is displayed indicating no results were found.
+
+== PROD-008
+When search results are displayed, the system shall highlight the matching search terms in the results.
+
+Type:: Event-driven
+Source:: US-002: Search Products, Criterion 4
+Verification:: Search for a term that matches products. Confirm that the search term is visually highlighted in the result text.
+
+== Traceability
+
+[cols="1,2,2", options="header"]
+|===
+| Requirement ID | Requirement Summary | Source
+
+| PROD-001
+| Product display format
+| US-001: Criterion 1
+
+| PROD-002
+| Product details in listing
+| US-001: Criterion 2
+
+| PROD-003
+| Category filtering
+| US-001: Criterion 3
+
+| PROD-004
+| Sort by attribute
+| US-001: Criterion 4
+
+| PROD-005
+| Search input field
+| US-002: Criterion 1
+
+| PROD-006
+| Search result display
+| US-002: Criterion 2
+
+| PROD-007
+| Empty search state
+| US-002: Criterion 3
+
+| PROD-008
+| Search term highlighting
+| US-002: Criterion 4
+|===
+----
+
+== Part 2: Sync Scenario
+
+=== Change
+
+User stories for `product-browsing` updated from version 1.0.0 to 1.1.0:
+- *Modified* US-002, Criterion 2: "display matching products" changed to "display matching products sorted by relevance"
+- *Removed* US-001, Criterion 4: sort option criterion removed
+
+=== Change Report
+
+```
+Spec sync: stories 1.0.0 -> 1.1.0
+
+Added:
+  (none)
+
+Modified:
+  - PROD-006: Added "sorted by relevance" to search results display
+
+Removed:
+  - PROD-004: Source criterion (US-001, Criterion 4: sort option) removed
+
+No changes to: PROD-001, PROD-002, PROD-003, PROD-005, PROD-007, PROD-008
+```
+
+=== Result After Sync
+
+- `spec.adoc`: version bumped to 2.0.0 (requirement removed), `:source-stories-version:` updated to 1.1.0
+- PROD-004 removed, remaining IDs unchanged (IDs are stable, not renumbered)
+- PROD-006 text updated to include "sorted by relevance"
+- Traceability section updated
+
+== Part 3: Constraint Overlap
+
+=== Scenario
+
+A project-wide constraint exists in `constraints.adoc`:
+
+```
+== Security
+* All user input must be validated before processing.
+```
+
+While deriving specs for the `product-browsing` feature, the criterion "When the user submits a search query, the system shall validate the input" would normally become a spec. Since it duplicates the project-wide constraint, it is not included in the feature spec. Instead:
+
+```asciidoc
+NOTE: Input validation for search queries is enforced by project constraint (Security: "All user input must be validated before processing"). Not duplicated here.
+```

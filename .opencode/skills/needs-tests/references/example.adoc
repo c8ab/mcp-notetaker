@@ -1,0 +1,188 @@
+= needs-tests Example
+:description: Deriving tests from the product-browsing feature specification
+
+== Context
+
+This example derives test cases from the `product-browsing` feature specification. The project uses TypeScript with Vitest.
+
+**Input:** `docs/features/product-browsing/spec.adoc` (v1.0.0) with 8 requirements (PROD-001 through PROD-008).
+
+**Existing infrastructure:** Vitest configured, test helpers in `tests/helpers/`, database factory in `tests/factories/`.
+
+== Part 1: Observation
+
+----
+Feature: product-browsing
+Spec: {exists: true, version: "1.0.0", requirement-count: 8}
+Design: {exists: true, version: "1.0.0"}
+Existing tests: {count: 0, spec-ids-covered: [], spec-ids-missing: [PROD-001..PROD-008]}
+Test framework: Vitest
+Coverage constraints: ["Test coverage must not decrease per feature implementation"]
+----
+
+== Part 2: Evaluation
+
+All 8 requirements need tests. Design is available, so test levels are informed by the Story Resolution section.
+
+----
+Action: generate
+Requirements to test: 8 (new: 8, modified: 0, uncovered: 0)
+Constraint requirements: [coverage must not decrease]
+----
+
+== Part 3: Test derivation
+
+=== PROD-001 (Ubiquitous): Product display format
+
+**Spec:**
+
+----
+The system shall display products in a grid or list format.
+Type:: Ubiquitous
+Source:: US-001: View Product Catalog, Criterion 1
+Verification:: Open the product catalog page. Confirm that products are displayed in a grid or list layout.
+----
+
+**Design context:** Product Catalog page (SSR), fetches from `GET /api/products`.
+
+**Derived test level:** Integration (spans page rendering and API).
+
+**Derived test cases:**
+
+[source,typescript]
+----
+describe("PROD-001: displays products in grid or list format", () => {
+  it("should display products in a grid layout by default", async () => {
+    await factory.create("product", { name: "Widget A" });
+    await factory.create("product", { name: "Widget B" });
+
+    const response = await request(app).get("/api/products");
+
+    expect(response.status).toBe(200);
+    expect(response.body.products).toHaveLength(2);
+    expect(response.body.products[0]).toHaveProperty("name");
+    expect(response.body.products[0]).toHaveProperty("price");
+    expect(response.body.products[0]).toHaveProperty("image");
+  });
+
+  it("should return an empty list when no products exist", async () => {
+    const response = await request(app).get("/api/products");
+
+    expect(response.status).toBe(200);
+    expect(response.body.products).toHaveLength(0);
+  });
+});
+----
+
+=== PROD-002 (Event-driven): Category filtering
+
+**Spec:**
+
+----
+When the user selects a category filter, the system shall display only products in that category.
+Type:: Event-driven
+Source:: US-001: View Product Catalog, Criterion 3
+Verification:: Select a category filter. Confirm that only products in the selected category are displayed.
+----
+
+**Derived test level:** Integration (API filtering logic).
+
+**Derived test cases:**
+
+[source,typescript]
+----
+describe("PROD-002: category filtering", () => {
+  it("should return only products in the selected category", async () => {
+    await factory.create("product", { name: "Widget", category: "electronics" });
+    await factory.create("product", { name: "Shirt", category: "clothing" });
+
+    const response = await request(app).get("/api/products?category=electronics");
+
+    expect(response.status).toBe(200);
+    expect(response.body.products).toHaveLength(1);
+    expect(response.body.products[0].name).toBe("Widget");
+  });
+
+  it("should return all products when no category filter is applied", async () => {
+    await factory.create("product", { category: "electronics" });
+    await factory.create("product", { category: "clothing" });
+
+    const response = await request(app).get("/api/products");
+
+    expect(response.body.products).toHaveLength(2);
+  });
+
+  it("should return empty list for a category with no products", async () => {
+    await factory.create("product", { category: "electronics" });
+
+    const response = await request(app).get("/api/products?category=books");
+
+    expect(response.status).toBe(200);
+    expect(response.body.products).toHaveLength(0);
+  });
+});
+----
+
+== Part 4: File organization
+
+Following the project's existing test layout:
+
+----
+tests/
+└── features/
+    └── product-browsing/
+        ├── products-api.test.ts       # Integration: PROD-001, PROD-002, PROD-003, PROD-004
+        ├── product-search.test.ts     # Integration: PROD-005, PROD-006, PROD-007
+        └── product-catalog.e2e.ts     # E2E: PROD-008 (page-level rendering)
+----
+
+Each file includes a header:
+
+[source,typescript]
+----
+// Feature: product-browsing
+// Spec version: 1.0.0
+// Generated from: spec.adoc
+//
+// Spec coverage:
+//   PROD-001: displays products in grid or list format
+//   PROD-002: category filtering
+//   PROD-003: product detail display
+//   PROD-004: price display with currency
+----
+
+== Part 5: Verification
+
+----
+Tests generated:
+  Files: 3 new, 0 modified
+  Test cases: 19 total (0 unit, 15 integration, 4 e2e)
+  Spec coverage: 8/8 requirement IDs covered
+  Test results: 19 passed, 0 failed
+  Coverage: 82% (constraint threshold: none specified, must not decrease)
+----
+
+== Part 6: Sync scenario
+
+Stories updated to v1.1.0, spec synced to v2.0.0 (PROD-004 removed, PROD-009 added).
+
+**Observation:**
+
+----
+Existing tests: {count: 19, spec-ids-covered: [PROD-001..PROD-008], spec-ids-missing: [PROD-009]}
+----
+
+**Evaluation:**
+
+----
+Action: update
+Requirements to test: 1 (new: 1, modified: 0, uncovered: 0)
+Orphaned tests: PROD-004 tests (requirement removed)
+----
+
+**Execution:**
+
+1. Remove test cases for PROD-004 from `products-api.test.ts`
+2. Add test cases for PROD-009 to the appropriate test file
+3. Update spec version in file headers from `1.0.0` to `2.0.0`
+4. Run tests: 18 passed, 0 failed

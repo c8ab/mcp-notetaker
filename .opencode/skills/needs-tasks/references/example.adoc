@@ -1,0 +1,120 @@
+= Tasks Example
+
+This file shows a complete task list for the `shopping-cart` feature. The feature design document from the needs-design example is used as input.
+
+== Context
+
+Given:
+
+* `docs/features/shopping-cart/design.adoc` at version `1.0.0` with system design (frontend, backend service layer, state management) and story resolution for 2 stories
+* `docs/features/shopping-cart/data-model.adoc` at version `1.0.0` with entities: Cart, CartItem
+* `docs/features/shopping-cart/user-stories.adoc` at version `1.0.0` with 2 stories (Add to Cart, View Cart)
+* `docs/features/shopping-cart/spec.adoc` at version `1.0.0` with prefix CART (8 requirements)
+
+== Task List File (docs/features/shopping-cart/tasks.adoc)
+
+....
+= Implementation Tasks: Shopping Cart
+:version: 1.0.0
+:status: Current
+:source-design-version: 1.0.0
+:source-stories-version: 1.0.0
+:source-spec-version: 1.0.0
+:last-updated: 2026-02-21
+:feature: shopping-cart
+:toc:
+
+== Overview
+
+Implementation plan for the shopping cart feature. 3 phases, 9 tasks. The plan progresses from data model foundation through backend service and API routes to frontend components and state management.
+
+== Phase 1: Foundation
+
+Create database entities and migrations for cart persistence.
+
+* [ ] TASK-001: Create Cart and CartItem entities and migrations [sequential]
++
+Components:: Database, Cart model, CartItem model
+Stories:: US-001, US-002
+Specs:: CART-001, CART-005
+Description:: Create Cart table (id, session_id indexed, created_at, updated_at) and CartItem table (id, cart_id FK, product_id FK, quantity >= 1). Set up cascade delete from Cart to CartItem. FK to existing Product table.
+
+== Phase 2: Backend
+
+Implement the CartService and API route handlers.
+
+* [ ] TASK-002: Implement CartService with business logic [sequential]
++
+Components:: CartService
+Stories:: US-001, US-002
+Specs:: CART-002, CART-004, CART-007, CART-008
+Description:: Create CartService class in the service layer. Methods: addToCart (validates stock, handles duplicates by incrementing quantity), updateQuantity (validates stock), removeItem, getCart. All business logic in the service, not route handlers (architecture constraint).
+
+* [ ] TASK-003: Implement POST /api/cart/items endpoint [parallel]
++
+Components:: POST /api/cart/items, CartService
+Stories:: US-001
+Specs:: CART-001, CART-002, CART-004
+Description:: Route handler that creates cart with session_id if none exists, delegates to CartService.addToCart. Returns updated cart JSON.
+
+* [ ] TASK-004: Implement PATCH /api/cart/items/:id endpoint [parallel]
++
+Components:: PATCH /api/cart/items, CartService
+Stories:: US-002
+Specs:: CART-007
+Description:: Route handler that delegates to CartService.updateQuantity. Validates item exists. Returns updated cart item.
+
+* [ ] TASK-005: Implement DELETE /api/cart/items/:id endpoint [parallel]
++
+Components:: DELETE /api/cart/items, CartService
+Stories:: US-002
+Specs:: CART-008
+Description:: Route handler that delegates to CartService.removeItem. Returns 204 on success, 404 if not found.
+
+== Phase 3: Frontend
+
+Build the UI components, state management, and cart page.
+
+* [ ] TASK-006: Implement CartContext state management [sequential]
++
+Components:: CartContext
+Stories:: US-001, US-002
+Specs:: CART-002, CART-005
+Description:: Create React Context for cart state. Store cart items, provide add/update/remove actions that call backend APIs. Sync state with localStorage for anonymous users. Expose item count for CartIcon.
+
+* [ ] TASK-007: Add add-to-cart button to ProductCard [parallel]
++
+Components:: ProductCard (existing), CartContext
+Stories:: US-001
+Specs:: CART-001, CART-003
+Description:: Add "Add to Cart" button to existing ProductCard component. On click, call CartContext.addToCart. Display success toast after add.
+
+* [ ] TASK-008: Build CartIcon header component [parallel]
++
+Components:: CartIcon, CartContext
+Stories:: US-001
+Specs:: CART-002
+Description:: Header icon showing current item count from CartContext. Link to Cart Page.
+
+* [ ] TASK-009: Build Cart Page [parallel]
++
+Components:: Cart Page, CartContext
+Stories:: US-002
+Specs:: CART-005, CART-006, CART-007, CART-008
+Description:: Client-side page reading from CartContext. Render line items with quantity controls (+/- buttons) and remove button. Display running total. "Proceed to Checkout" button.
+
+== Traceability
+
+[cols="1,1,1", options="header"]
+|===
+| Story | Spec IDs | Tasks
+
+| US-001: Add to Cart
+| CART-001, CART-002, CART-003, CART-004
+| TASK-001, TASK-002, TASK-003, TASK-006, TASK-007, TASK-008
+
+| US-002: View Cart
+| CART-005, CART-006, CART-007, CART-008
+| TASK-001, TASK-002, TASK-004, TASK-005, TASK-006, TASK-009
+|===
+....

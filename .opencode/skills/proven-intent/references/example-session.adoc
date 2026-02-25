@@ -1,0 +1,294 @@
+= Example: Intent-Driven Session
+
+This file demonstrates two complete state transitions: a feature evolution intent and a maintenance intent.
+
+== Session 1: Feature Evolution
+
+=== User Intent
+
+"I want an e-commerce site where users can browse products, add them to cart, and checkout"
+
+=== Step 1: Observe Current State
+
+....
+Current state:
+  Features: 0 (no feature packages exist)
+  Constraints: constraints.adoc exists with 6 rules
+  ADRs: 0
+  Architecture: none
+  Codebase: empty project, package.json with Next.js scaffold
+  Constraint violations: none
+....
+
+=== Step 2: Classify Intent
+
+Intent type: **Feature evolution** (describes user-facing capabilities with user journeys).
+
+Not a constraint (no universal quantifiers, has identifiable user roles and journeys).
+
+=== Step 3: Feature Decomposition (Two-Pass)
+
+**Pass 1:** Invoke `needs-stories` with temporary slug `_drafts` to derive stories from the intent. 5 stories identified.
+
+Analyze story cohesion and propose feature grouping:
+
+....
+Based on your intent, I propose 3 features:
+
+Feature 1: product-browsing
+  - View Product Catalog
+  - Search Products
+  (Share product data and catalog UI)
+
+Feature 2: shopping-cart
+  - Add to Cart
+  - View Cart
+  (Share cart state and cart data)
+
+Feature 3: checkout
+  - Checkout Process
+  (Independent user journey with payment flow)
+
+Adjust grouping?
+....
+
+User confirms the grouping.
+
+**Pass 2:** For each confirmed feature, invoke `needs-stories` with the final slug to create `user-stories.adoc` with proper feature-scoped story IDs (US-001, US-002, ... per feature). Remove temporary `_drafts` directory.
+
+=== Step 4: Evaluate Feasibility
+
+For each feature:
+- Stories can be created (no preconditions)
+- Specs can be derived from stories
+- Design can be created from stories + specs
+- Tasks can be derived from design
+- Implementation can proceed from tasks
+- No constraint violations anticipated
+
+Technology decisions will emerge during design (framework, database, payment provider) -- ADRs will be created.
+
+....
+Transition plan:
+
+For each feature (product-browsing, shopping-cart, checkout):
+  1. needs-stories: Create user stories
+  2. needs-spec: Derive specifications
+  3. needs-design: Create implementation design
+  4. needs-tasks: Create phased task breakdown
+  5. needs-implementation: Implement code
+  6. Resolve any design divergences (user decides per-divergence)
+  7. needs-tests: Generate tests from specifications
+
+Additionally:
+  - needs-adr: Record technology decisions (during design phases)
+  - needs-architecture: Document architecture (after all features implemented)
+
+Risk: HIGH (new features, 3 feature packages, full lifecycle)
+Estimated: 15+ artifacts + code + tests
+
+Proceed?
+....
+
+User confirms.
+
+=== Step 5: Execute Transition
+
+==== Feature 1: product-browsing
+
+1. **needs-stories** creates `docs/features/product-browsing/user-stories.adoc` v1.0.0 (2 stories)
+2. **needs-spec** derives `docs/features/product-browsing/spec.adoc` v1.0.0 (prefix: PROD, 8 requirements)
+3. **needs-design** creates `docs/features/product-browsing/design.adoc` v1.0.0
+   - During Phase 0, identifies technology decisions: framework choice, database choice
+   - Invokes **needs-adr** to create ADR-0001 (TypeScript) and ADR-0002 (PostgreSQL)
+4. **needs-tasks** creates `docs/features/product-browsing/tasks.adoc` v1.0.0 (3 phases, 8 tasks)
+5. **needs-implementation** implements code phase by phase
+6. **Divergence check:** needs-implementation reports no divergences (implementation matched design)
+7. **needs-tests** generates tests from PROD-001 through PROD-008 (3 test files, 19 test cases)
+
+==== Feature 2: shopping-cart
+
+1. **needs-stories** creates `docs/features/shopping-cart/user-stories.adoc` v1.0.0 (2 stories)
+2. **needs-spec** derives `docs/features/shopping-cart/spec.adoc` v1.0.0 (prefix: CART, 8 requirements)
+3. **needs-design** creates `docs/features/shopping-cart/design.adoc` v1.0.0
+   - References existing ADRs, no new decisions needed
+4. **needs-tasks** creates `docs/features/shopping-cart/tasks.adoc` v1.0.0 (3 phases, 9 tasks)
+5. **needs-implementation** implements code phase by phase
+6. **Divergence check:** needs-implementation reports 1 divergence:
++
+....
+Design divergence: CartService validation placement
+  Design: Validation logic in CartService.addItem()
+  Implementation: Zod schema validation in POST /api/cart route handler
+  Reason: Zod schema validation at the API boundary is more idiomatic with the project's patterns
+  Update design: Reflect route-level validation (aligns with other routes)
+  Fix code: Move validation into CartService (satisfies architecture constraint)
+....
++
+User decides: "Update design" -- the route-level pattern is consistent and the constraint is about business logic, not input validation.
++
+Orchestrator invokes **needs-design** (reconciliation mode) to update `design.adoc` v1.0.1.
+
+7. **needs-tests** generates tests from CART-001 through CART-008 (3 test files, 22 test cases)
+
+==== Feature 3: checkout
+
+1. **needs-stories** creates `docs/features/checkout/user-stories.adoc` v1.0.0 (1 story)
+2. **needs-spec** derives `docs/features/checkout/spec.adoc` v1.0.0 (prefix: CHK, 6 requirements)
+3. **needs-design** creates `docs/features/checkout/design.adoc` v1.0.0
+   - During Phase 0, identifies payment provider decision
+   - Invokes **needs-adr** to create ADR-0003 (Stripe)
+4. **needs-tasks** creates `docs/features/checkout/tasks.adoc` v1.0.0 (3 phases, 7 tasks)
+5. **needs-implementation** implements code phase by phase
+6. **Divergence check:** needs-implementation reports no divergences
+7. **needs-tests** generates tests from CHK-001 through CHK-006 (2 test files, 14 test cases)
+
+==== Post-implementation
+
+- **needs-architecture** creates `docs/architecture.adoc` v1.0.0 from all feature designs and codebase (invoked after all features are implemented)
+
+=== Step 6: Validate
+
+Re-observe current state:
+
+....
+Current state:
+  Features: 3 (product-browsing [implemented], shopping-cart [implemented], checkout [implemented])
+  Constraints: 6 rules, 0 violations
+  ADRs: 3 accepted
+  Architecture: v1.0.0 (current)
+  Codebase: TypeScript/Next.js, build passing, tests passing
+....
+
+Desired state "users can browse products, add them to cart, and checkout" is achieved.
+
+=== Step 7: Record Transition
+
+....
+== TRANSITION-001
+:date: 2026-02-23
+:intent: Users can browse products, add them to cart, and checkout
+:type: Feature evolution
+:risk: High
+:features: product-browsing (new), shopping-cart (new), checkout (new)
+:desired-state: E-commerce site with product browsing, cart management, and checkout
+:prior-state: Empty project scaffold
+:capabilities-invoked: needs-stories, needs-spec, needs-design, needs-adr, needs-tasks, needs-implementation, needs-tests, needs-architecture
+:constraints-checked: Security (pass), Architecture (pass), Quality (pass), Licensing (pass)
+:result: Achieved
+:artifacts-modified: 12 feature artifacts, 3 ADRs, 1 architecture doc, 8 test files, source code
+....
+
+---
+
+== Session 2: Maintenance Intent (Auto-Approve)
+
+=== User Intent (system-detected)
+
+The orchestrator detects during observation:
+
+....
+Dependency alert: lodash@4.17.20 has HIGH CVE-2021-23337 (command injection)
+Security constraint: "No dependency with a known CRITICAL or HIGH CVE may remain unpatched for more than 7 days"
+Constraint status: VIOLATED
+....
+
+=== Classification
+
+Intent type: **Dependency maintenance**
+Risk: **Low** (patch update available: lodash@4.17.21)
+
+=== Auto-Approve
+
+This qualifies for auto-approval because:
+- Patch-level update (4.17.20 -> 4.17.21)
+- Resolves a constraint violation
+- Low risk of breaking changes
+
+=== Execute
+
+1. **needs-dependencies** updates lodash 4.17.20 -> 4.17.21
+2. Runs `npm install` -- lockfile updated
+3. Runs build -- passes
+4. Runs tests -- passes
+5. Runs `npm audit` -- no remaining vulnerabilities
+
+=== Report
+
+....
+Auto-approved: Updated lodash 4.17.20 -> 4.17.21 (CVE-2021-23337 resolved).
+Build passing. Tests passing. No remaining vulnerabilities.
+....
+
+=== Record Transition
+
+....
+== TRANSITION-002
+:date: 2026-02-24
+:intent: No dependencies have known vulnerabilities
+:type: Dependency maintenance
+:risk: Low (auto-approved)
+:features: n/a (project-wide)
+:desired-state: Zero known vulnerabilities in dependency graph
+:prior-state: lodash@4.17.20 with HIGH CVE-2021-23337
+:capabilities-invoked: needs-dependencies
+:constraints-checked: Security (triggered -- resolved), Licensing (pass)
+:result: Achieved
+:artifacts-modified: package.json, package-lock.json
+....
+
+---
+
+== Session 3: Constraint Declaration
+
+=== User Intent
+
+"All API endpoints must enforce rate limiting at 100 requests per minute per client"
+
+=== Classification
+
+Intent type: **Constraint declaration**
+
+Detected as constraint because:
+- Universal quantifier: "All API endpoints"
+- System-as-subject: describes a system property
+- Future-proof: applies to endpoints that don't exist yet
+- No user journey
+
+=== Execute
+
+1. Add to `constraints.adoc` under Security section:
++
+....
+* All API endpoints must enforce rate limiting at 100 requests per minute per client.
+....
+
+2. Bump `constraints.adoc` version (MINOR)
+3. Check existing codebase: current API endpoints do NOT have rate limiting
+4. Report constraint violation to user:
++
+....
+New constraint added. Current violation detected:
+  6 API endpoints lack rate limiting.
+
+Would you like to remediate now? This would require updating all route handlers.
+....
+
+5. If user confirms, derive a transition to add rate limiting middleware (likely touching the product-browsing, shopping-cart, and checkout features at the implementation level).
+
+=== Record Transition
+
+....
+== TRANSITION-003
+:date: 2026-02-25
+:intent: All API endpoints must enforce rate limiting
+:type: Constraint declaration
+:risk: High (new constraint + remediation)
+:features: n/a (project-wide constraint)
+:desired-state: Rate limiting enforced on all endpoints
+:prior-state: No rate limiting
+:capabilities-invoked: (constraint update) + needs-implementation (if remediated)
+:constraints-checked: n/a (this IS a constraint addition)
+:result: Achieved (constraint added, remediation applied)
+:artifacts-modified: constraints.adoc, rate-limiting middleware, route handlers
+....

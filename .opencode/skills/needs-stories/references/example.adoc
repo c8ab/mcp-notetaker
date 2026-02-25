@@ -1,0 +1,114 @@
+= Example: Intent to Feature User Stories
+
+== Context
+
+The orchestrator has received the intent: "I want an e-commerce site where users can browse products, add them to cart, and checkout."
+
+After feature decomposition, the orchestrator has created three feature packages:
+- `product-browsing`
+- `shopping-cart`
+- `checkout`
+
+This example shows the `needs-stories` output for the `product-browsing` feature.
+
+== Output: docs/features/product-browsing/user-stories.adoc
+
+[source,asciidoc]
+----
+= User Stories: Product Browsing
+:version: 1.0.0
+:last-updated: 2026-02-20
+:feature: product-browsing
+:toc:
+
+== US-001: View Product Catalog
+As a shopper,
+I want to browse available products,
+so that I can find items I want to purchase.
+
+Acceptance Criteria:
+
+* [ ] The system shall display products in a grid or list format.
+* [ ] The system shall show the name, price, and image for each product.
+* [ ] When the user selects a category filter, the system shall display only products in that category.
+* [ ] When the user selects a sort option, the system shall order products by the selected attribute.
+
+== US-002: Search Products
+As a shopper,
+I want to search for products by keyword,
+so that I can quickly find specific items.
+
+Acceptance Criteria:
+
+* [ ] The system shall provide a search input that accepts text queries.
+* [ ] When the user submits a search query, the system shall display matching products.
+* [ ] When the user submits a search query that matches no products, the system shall display a helpful empty-state message.
+* [ ] When search results are displayed, the system shall highlight the matching search terms in the results.
+----
+
+== Output: docs/features/shopping-cart/user-stories.adoc
+
+[source,asciidoc]
+----
+= User Stories: Shopping Cart
+:version: 1.0.0
+:last-updated: 2026-02-20
+:feature: shopping-cart
+:toc:
+
+== US-001: Add to Cart
+As a shopper,
+I want to add products to my cart,
+so that I can purchase multiple items at once.
+
+Acceptance Criteria:
+
+* [ ] The system shall display an add-to-cart button on each product.
+* [ ] When the user adds a product to the cart, the system shall update the cart count in the header.
+* [ ] When the user adds a product to the cart, the system shall display a success confirmation.
+* [ ] When the user adds a product that is already in the cart, the system shall increment the quantity for that product.
+
+== US-002: View Cart
+As a shopper,
+I want to view my cart contents,
+so that I can review items before checkout.
+
+Acceptance Criteria:
+
+* [ ] The system shall display all cart items with their quantities.
+* [ ] The system shall display correct item prices and a cart total.
+* [ ] When the user changes an item quantity, the system shall update the item subtotal and cart total.
+* [ ] When the user removes an item from the cart, the system shall remove it from the display and update the cart total.
+----
+
+== Output: docs/features/checkout/user-stories.adoc
+
+[source,asciidoc]
+----
+= User Stories: Checkout
+:version: 1.0.0
+:last-updated: 2026-02-20
+:feature: checkout
+:toc:
+
+== US-001: Checkout Process
+As a shopper,
+I want to complete my purchase,
+so that I can receive my ordered items.
+
+Acceptance Criteria:
+
+* [ ] The system shall provide a form for entering a shipping address.
+* [ ] The system shall allow the user to select a payment method.
+* [ ] The system shall display an order summary before the user confirms the order.
+* [ ] When the user confirms the order, the system shall display a confirmation page.
+* [ ] When the order is confirmed, the system shall send an order confirmation email.
+* [ ] If payment processing fails, then the system shall display an error message and allow the user to retry.
+----
+
+== Notes
+
+- Each feature has its own `user-stories.adoc` with story IDs starting at US-001 within that feature
+- Story IDs are unique within a feature, not globally (US-001 in `product-browsing` is different from US-001 in `shopping-cart`)
+- No story references or depends on stories in other features
+- Cross-cutting requirements (e.g., "all prices display in the user's local currency") would be flagged as potential constraints rather than duplicated across features
