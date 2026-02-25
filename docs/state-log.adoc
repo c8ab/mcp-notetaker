@@ -1,0 +1,15 @@
+= State Transition Log
+:last-updated: 2026-02-25
+
+== TRANSITION-001
+:date: 2026-02-25
+:intent: MCP server with SQLite-backed atomic note CRUD, full-text search, rich metadata, and soft-delete
+:type: Feature evolution (greenfield)
+:risk: High
+:features: note-management (new)
+:desired-state: An MCP server exists that exposes CRUD tools for atomic notes stored in a SQLite database, with rich metadata including session tracking, user/agent attribution, tagging, threading, and soft-delete
+:prior-state: Empty repository with LICENSE and README only. No code, no features, no documentation.
+:capabilities-invoked: needs-stories, needs-spec, needs-design, needs-adr, needs-tasks, needs-implementation, needs-tests, needs-architecture
+:constraints-checked: None (no constraints.adoc defined)
+:result: Achieved
+:artifacts-modified: docs/features/note-management/user-stories.adoc (v1.0.0), docs/features/note-management/spec.adoc (v1.0.0), docs/features/note-management/design.adoc (v1.0.1), docs/features/note-management/data-model.adoc (v1.0.0), docs/features/note-management/tasks.adoc (v1.0.0, status: Implemented), docs/adrs/0001-use-typescript-with-mcp-sdk.adoc (Accepted), docs/adrs/0002-use-sqlite-with-better-sqlite3.adoc (Accepted), docs/adrs/0003-soft-delete-pattern.adoc (Accepted), docs/adrs/0004-uuid-v7-for-note-identifiers.adoc (Accepted), docs/adrs/index.adoc (v1.0.0), docs/architecture.adoc (v1.0.0), AGENTS.md, package.json, tsconfig.json, vitest.config.ts, .gitignore, src/index.ts, src/types.ts, src/schema.ts, src/repository/note-repository.ts, src/tools/create-note.ts, src/tools/get-note.ts, src/tools/list-notes.ts, src/tools/update-note.ts, src/tools/delete-note.ts, src/tools/search-notes.ts, tests/features/note-management/note-repository.test.ts, tests/features/note-management/tool-handlers.test.ts
