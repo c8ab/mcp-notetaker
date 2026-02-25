@@ -1,6 +1,6 @@
 = Implementation Tasks: Note Management
 :version: 1.0.0
-:status: Current
+:status: Implemented
 :source-design-version: 1.0.0
 :source-stories-version: 1.0.0
 :source-spec-version: 1.0.0
@@ -112,7 +112,7 @@ Description:: Two mutation tool handlers. `update_note`: validate input, check n
 
 Wire everything together into the runnable MCP server.
 
-* [ ] TASK-013: Implement MCP server entry point [sequential]
+* [x] TASK-013: Implement MCP server entry point [sequential]
 +
 Components:: src/index.ts
 Stories:: (all -- integration)
