@@ -87,21 +87,21 @@ Description:: Implement `search(query: string): Note[]`. Query FTS5 table joined
 
 Implement each MCP tool handler that delegates to NoteRepository.
 
-* [ ] TASK-010: Implement create_note tool handler [parallel]
+* [x] TASK-010: Implement create_note tool handler [parallel]
 +
 Components:: src/tools/create-note.ts
 Stories:: US-001
 Specs:: NOTE-001, NOTE-004, NOTE-005, NOTE-006, NOTE-007
 Description:: Export tool definition (name, description, Zod input schema) and handler function. Handler validates input via Zod schema. If parent_note_id provided, call repo.getById to verify parent exists -- return error if null. Call repo.create. Return complete note record as JSON in MCP tool result format.
 
-* [ ] TASK-011: Implement get_note, list_notes, search_notes tool handlers [parallel]
+* [x] TASK-011: Implement get_note, list_notes, search_notes tool handlers [parallel]
 +
 Components:: src/tools/get-note.ts, src/tools/list-notes.ts, src/tools/search-notes.ts
 Stories:: US-002, US-003, US-006
 Specs:: NOTE-008, NOTE-009, NOTE-010, NOTE-011 through NOTE-018, NOTE-032 through NOTE-036
 Description:: Three read-only tool handlers. `get_note`: validate note_id, call repo.getById, return note or not-found error. `list_notes`: validate optional filters, call repo.list, return array. `search_notes`: validate query string, call repo.search, return array. Each exports tool definition and handler.
 
-* [ ] TASK-012: Implement update_note and delete_note tool handlers [parallel]
+* [x] TASK-012: Implement update_note and delete_note tool handlers [parallel]
 +
 Components:: src/tools/update-note.ts, src/tools/delete-note.ts
 Stories:: US-004, US-005

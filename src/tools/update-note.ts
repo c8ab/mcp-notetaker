@@ -1,0 +1,64 @@
+/**
+ * update_note MCP tool -- Updates an existing note's mutable fields.
+ */
+
+import { z } from "zod";
+import { UpdateNoteSchema } from "../schema.js";
+import { NoteRepository, ParentNoteNotFoundError } from "../repository/note-repository.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+
+export function registerUpdateNote(server: McpServer, repo: NoteRepository): void {
+  server.registerTool(
+    "update_note",
+    {
+      description: "Update an existing note's mutable fields (title, content, tags, context_url, parent_note_id). Immutable fields (session_id, user_id, agent, created_at) cannot be changed.",
+      inputSchema: UpdateNoteSchema,
+    },
+    (args: z.infer<typeof UpdateNoteSchema>) => {
+      try {
+        const note = repo.update({
+          note_id: args.note_id,
+          title: args.title,
+          content: args.content,
+          tags: args.tags,
+          context_url: args.context_url,
+          parent_note_id: args.parent_note_id,
+        });
+
+        if (!note) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text" as const,
+                text: `Note '${args.note_id}' not found`,
+              },
+            ],
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(note, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        if (error instanceof ParentNoteNotFoundError) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text" as const,
+                text: error.message,
+              },
+            ],
+          };
+        }
+        throw error;
+      }
+    },
+  );
+}
