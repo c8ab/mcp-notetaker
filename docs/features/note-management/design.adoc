@@ -1,5 +1,5 @@
 = Design: Note Management
-:version: 1.0.0
+:version: 1.0.1
 :status: Current
 :source-stories-version: 1.0.0
 :source-spec-version: 1.0.0
@@ -278,8 +278,8 @@ Criteria::
 * Generate unique note_id -> NoteRepository.create generates UUID v7 before insert (NOTE-002)
 * Record timestamps -> NoteRepository.create sets created_at and updated_at to current ISO 8601 time (NOTE-003)
 * Store optional fields -> Zod schema marks tags, parent_note_id, context_url as optional; NoteRepository stores them (NOTE-004)
-* Verify parent exists -> Handler checks NoteRepository.getById(parent_note_id) before create (NOTE-005)
-* Reject invalid parent -> Handler returns error if getById returns null for parent_note_id (NOTE-006)
+* Verify parent exists -> NoteRepository.create verifies parent_note_id references an existing note (NOTE-005)
+* Reject invalid parent -> NoteRepository.create throws ParentNoteNotFoundError; handler catches and returns error (NOTE-006)
 * Return complete record -> Handler returns full note object from NoteRepository.create (NOTE-007)
 
 === US-002: Retrieve a Note
@@ -312,10 +312,10 @@ Criteria::
 * Updatable fields -> Zod schema accepts title, content, tags, context_url, parent_note_id (NOTE-020)
 * Immutable fields -> Zod schema does not accept note_id, session_id, user_id, agent, created_at in update input; NoteRepository.update never overwrites them (NOTE-021)
 * Set updated_at -> NoteRepository.update sets updated_at to current timestamp (NOTE-022)
-* Error if not found -> Handler calls NoteRepository.getById first; returns not-found if null (NOTE-023)
-* Error if soft-deleted -> NoteRepository.getById excludes soft-deleted; returns not-found (NOTE-024)
-* Verify parent on update -> Handler checks NoteRepository.getById(parent_note_id) if provided (NOTE-025)
-* Reject invalid parent -> Handler returns error if parent getById returns null (NOTE-026)
+* Error if not found -> NoteRepository.update returns null if note not found; handler returns not-found error (NOTE-023)
+* Error if soft-deleted -> NoteRepository.update checks deleted_at IS NULL; returns null if deleted (NOTE-024)
+* Verify parent on update -> NoteRepository.update verifies parent_note_id references an existing note (NOTE-025)
+* Reject invalid parent -> NoteRepository.update throws ParentNoteNotFoundError; handler catches and returns error (NOTE-026)
 * Return complete record -> Handler returns full note from NoteRepository.update (NOTE-027)
 
 === US-005: Delete a Note (Soft-Delete)
@@ -324,8 +324,8 @@ Components:: delete_note tool handler, NoteRepository.softDelete, NoteRepository
 Criteria::
 * Set deleted_at -> NoteRepository.softDelete sets deleted_at to current timestamp (NOTE-028)
 * Preserve record -> NoteRepository.softDelete uses UPDATE, not DELETE (NOTE-028)
-* Error if not found -> Handler calls NoteRepository.getById; returns not-found if null (NOTE-029)
-* Error if already deleted -> Handler checks for existing deleted_at via a separate query that does not filter deleted; returns already-deleted error (NOTE-030)
+* Error if not found -> NoteRepository.softDelete returns null if note not found; handler returns not-found error (NOTE-029)
+* Error if already deleted -> NoteRepository.softDelete throws NoteAlreadyDeletedError; handler catches and returns already-deleted error (NOTE-030)
 * Return confirmation -> Handler returns {note_id, deleted_at} on success (NOTE-031)
 
 === US-006: Search Notes by Content
