@@ -1,11 +1,11 @@
 ---
 name: needs-dependencies
-description: Manage and update the project dependency graph. Use when the proven-intent orchestrator determines that dependencies need updating, patching, or auditing. Operates at the project level. Observes outdated packages, known vulnerabilities, archived/unmaintained packages, and license compliance. Executes minimal updates that satisfy the desired state while respecting all constraints.
+description: Manage and update the project dependency graph. Use when the proven-needs orchestrator determines that dependencies need updating, patching, or auditing. Operates at the project level. Observes outdated packages, known vulnerabilities, archived/unmaintained packages, and license compliance. Executes minimal updates that satisfy the desired state while respecting all constraints.
 ---
 
 ## Prerequisites
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the desired state and current state context.
+This skill is invoked by the `proven-needs` orchestrator, which provides the desired state and current state context.
 
 ## Observe
 

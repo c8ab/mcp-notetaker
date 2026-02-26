@@ -1,5 +1,5 @@
 ---
-name: proven-intent
+name: proven-needs
 description: Intent-driven state transition workflow for evolving software systems. Declare a desired state, evaluate it against reality and constraints, then execute the minimal valid transition. Use when asked to implement a feature, fix something, update dependencies, improve quality, or make any change to the system. This is the single entry point — it observes current state, classifies the intent, evaluates feasibility against constraints, derives a transition plan, and orchestrates the appropriate needs-* capabilities. Also use when asked about the development workflow, how features are organized, or the overall process.
 ---
 
@@ -137,7 +137,11 @@ When this skill is invoked, immediately build the current state model:
 
 4. **`docs/architecture.adoc`** -- check existence, read `:version:` if present.
 
-5. **`docs/state-log.adoc`** -- check existence, read recent transitions for context. Pay particular attention to any transitions with `:result: Partial` -- these indicate work that was started but not completed. The partial transition's `:features:` and `:capabilities-invoked:` fields provide useful context for understanding why artifacts are in their current state (e.g., stories and spec exist but design is missing because a prior transition was stopped mid-way).
+5. **`docs/state-log.adoc`** -- check existence, read recent transitions for context. Pay particular attention to:
+   - **`:result: In Progress`** -- the prior session started a transition but ended unexpectedly (crash, context exhaustion, tool failure) without cleanly recording a result. The entry contains the intent and plan but `:capabilities-invoked:` may be empty or incomplete. Propose resuming the transition or marking it as `:result: Failed` before starting new work.
+   - **`:result: Partial`** -- the user explicitly stopped a transition mid-way. The entry lists capabilities completed vs. remaining. Propose completing the remaining capabilities before starting new work.
+   
+   In both cases, the transition's `:features:` and `:capabilities-invoked:` fields provide useful context for understanding why artifacts are in their current state (e.g., stories and spec exist but design is missing because a prior transition was interrupted).
 
 #### 1.2 Analyze codebase
 
@@ -467,6 +471,8 @@ Store the user's choice for the duration of this transition. Default to **Intera
 
 ### 5. Execute Transition
 
+**Before invoking the first capability**, append an `In Progress` entry to `docs/state-log.adoc` with the fields known so far: `:date:`, `:intent:`, `:type:`, `:risk:`, `:features:`, `:desired-state:`, `:prior-state:`, and `:result: In Progress`. Leave `:capabilities-invoked:`, `:constraints-checked:`, and `:artifacts-modified:` empty -- these are filled in when the transition completes or is stopped. This ensures that if the session ends unexpectedly, a recoverable trace exists.
+
 Invoke capabilities in the derived order by loading each capability skill. For each capability:
 
 1. The orchestrator passes the feature context (slug, desired state, current state for that feature)
@@ -489,8 +495,8 @@ Maintain an explicit checklist of all capabilities to invoke for this transition
 In both modes, the following rules apply:
 - **Do NOT skip capabilities in the plan.** Every capability in the derived transition plan must be invoked unless the user explicitly asks to stop.
 - **Do NOT treat `needs-implementation` as the final step.** Post-implementation capabilities (`needs-tests`, `needs-architecture`, design divergence resolution) are part of the plan and must execute.
-- If the user asks to stop mid-transition, record a partial transition in `docs/state-log.adoc` with `:result: Partial` and list the capabilities completed vs. remaining.
-- When a new session starts, the Observe phase (step 1) reads the state-log for `:result: Partial` entries. If a partial transition exists, propose completing it before starting new work.
+- If the user asks to stop mid-transition, update the existing `In Progress` entry in `docs/state-log.adoc`: set `:result: Partial`, fill in `:capabilities-invoked:` with capabilities completed so far, and add `:capabilities-remaining:` listing what was not yet invoked.
+- When a new session starts, the Observe phase (step 1) reads the state-log for `:result: Partial` or `:result: In Progress` entries. Either indicates incomplete work -- propose completing it before starting new work.
 
 **Design divergence resolution (after `needs-implementation` completes):**
 
@@ -534,7 +540,7 @@ After `needs-implementation` completes, verify that it produced a divergence rep
 **Error handling:**
 - If a capability fails validation → stop, report to user, ask how to proceed
 - If a constraint is violated during execution → stop, report, offer to revise or abort
-- If the user wants to stop mid-transition → save progress, record partial transition in state log
+- If the user wants to stop mid-transition → save progress, update the `In Progress` entry to `:result: Partial` in state log
 
 ### 6. Validate
 
@@ -546,17 +552,17 @@ After all capabilities in the transition have executed:
 4. Run verification commands (build, test, lint) if code was changed
 
 **If desired state achieved:**
-- Record the transition in `docs/state-log.adoc`
+- Update the existing `In Progress` entry in `docs/state-log.adoc`: set `:result: Achieved`, fill in `:capabilities-invoked:`, `:constraints-checked:`, and `:artifacts-modified:`
 - Report success to user
 
 **If desired state NOT achieved:**
 - Identify what's missing
 - Propose additional steps or report what went wrong
-- Do not record as successful in state log
+- Do not update the entry to `:result: Achieved` -- leave as `In Progress` until resolved, or set to `:result: Failed` if unrecoverable
 
 ### 7. Record Transition
 
-Append to `docs/state-log.adoc`. See the State Log section for format.
+Update the existing `In Progress` entry in `docs/state-log.adoc` with the final result. The entry was created at the start of Step 5 -- now fill in `:capabilities-invoked:`, `:constraints-checked:`, `:artifacts-modified:`, and set `:result:` to `Achieved`, `Partial`, or `Failed`. See the State Log section for format.
 
 ## Risk Classification and Auto-Approve
 
@@ -718,9 +724,12 @@ A constraint violation blocks a transition unless the user explicitly chooses to
 
 - Transitions are numbered sequentially (TRANSITION-001, TRANSITION-002, ...)
 - Newest transitions appear first (reverse chronological)
-- The log is append-only (never edited after recording)
-- Partial transitions (user stopped mid-way) are recorded with `:result: Partial` and a note about what was completed
-- Failed transitions are recorded with `:result: Failed` and a reason
+- Entries are created at the start of execution with `:result: In Progress`, then updated exactly once with the final result when the transition completes or is stopped
+- `:result:` values:
+  - `In Progress` -- transition is actively executing, or the prior session ended unexpectedly before recording a final result. On session start, the Observe phase detects these and proposes resuming or marking as Failed.
+  - `Achieved` -- desired state was reached and validated
+  - `Partial` -- user explicitly stopped the transition mid-way. `:capabilities-invoked:` lists what completed; `:capabilities-remaining:` lists what was not yet invoked.
+  - `Failed` -- transition failed with a reason
 
 ## Feature Package Conventions
 
@@ -832,19 +841,19 @@ Feature specifications describe only externally observable behavior. Internal ar
 
 ## Bootstrap
 
-When this skill is loaded, **immediately** check the project's `AGENTS.md` for the proven-intent workflow marker.
+When this skill is loaded, **immediately** check the project's `AGENTS.md` for the proven-needs workflow marker.
 
 ```mermaid
 flowchart TD
     START["Read AGENTS.md"] --> EXISTS{"File<br/>exists?"}
 
-    EXISTS -->|No| APPEND["Append proven-intent<br/>block to new file"]
-    EXISTS -->|Yes| MARKER{"proven-intent<br/>marker found?"}
+    EXISTS -->|No| APPEND["Append proven-needs<br/>block to new file"]
+    EXISTS -->|Yes| MARKER{"proven-needs<br/>marker found?"}
 
     MARKER -->|Yes| DONE["Do nothing<br/>(already bootstrapped)"]
     MARKER -->|No| LEGACY{"Legacy<br/>proven-needs<br/>marker found?"}
 
-    LEGACY -->|Yes| REPLACE["Replace proven-needs<br/>block with<br/>proven-intent block"]
+    LEGACY -->|Yes| REPLACE["Replace proven-needs<br/>block with<br/>proven-needs block"]
     LEGACY -->|No| APPEND
 
     REPLACE --> INFORM["Inform user<br/>AGENTS.md updated"]
@@ -854,19 +863,19 @@ flowchart TD
 ### Steps
 
 1. Read `AGENTS.md` in the project root (it may not exist yet).
-2. Search for the marker `<!-- proven-intent:start -->`.
+2. Search for the marker `<!-- proven-needs:start -->`.
 3. **If the marker is found** -- do nothing, the project is already bootstrapped.
 4. **If the marker is NOT found** -- check for the legacy marker `<!-- proven-needs:start -->`. If found, replace the entire block (from `<!-- proven-needs:start -->` to `<!-- proven-needs:end -->`) with the new block below. If neither marker exists, append the new block.
 
 ```markdown
-<!-- proven-intent:start -->
+<!-- proven-needs:start -->
 ## Development Workflow
-This project uses the proven-intent state transition workflow.
+This project uses the proven-needs state transition workflow.
 To make changes, declare a desired state and the system will derive
 the minimal valid transition: Observe → Evaluate → Derive → Execute → Validate.
 Feature work is organized in `docs/features/`. Project constraints are in `constraints.adoc`.
-Load the `proven-intent` skill to start.
-<!-- proven-intent:end -->
+Load the `proven-needs` skill to start.
+<!-- proven-needs:end -->
 ```
 
 5. Inform the user that `AGENTS.md` was updated.

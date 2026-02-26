@@ -1,13 +1,13 @@
 ---
 name: needs-stories
-description: Create and update user stories with EARS acceptance criteria for a feature. Use when the proven-intent orchestrator determines that a feature needs user stories created or updated. Operates within a single feature package at docs/features/<slug>/. Stories explain WHY from the user's perspective — the needs, motivations, and value a feature delivers.
+description: Create and update user stories with EARS acceptance criteria for a feature. Use when the proven-needs orchestrator determines that a feature needs user stories created or updated. Operates within a single feature package at docs/features/<slug>/. Stories explain WHY from the user's perspective — the needs, motivations, and value a feature delivers.
 ---
 
 ## Prerequisites
 
 Load the `ears-requirements` skill before writing acceptance criteria. It provides the EARS sentence types and templates.
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the feature context (slug, intent, current state).
+This skill is invoked by the `proven-needs` orchestrator, which provides the feature context (slug, intent, current state).
 
 ## Observe
 

@@ -1,11 +1,11 @@
 ---
 name: needs-tasks
-description: Create phased implementation task lists for a feature. Use when the proven-intent orchestrator determines that a feature needs a task breakdown. Operates within a single feature package at docs/features/<slug>/. Tasks define the WORK — discrete coding units organized into sequential phases with parallelism markers and full traceability back to the feature's specs and stories.
+description: Create phased implementation task lists for a feature. Use when the proven-needs orchestrator determines that a feature needs a task breakdown. Operates within a single feature package at docs/features/<slug>/. Tasks define the WORK — discrete coding units organized into sequential phases with parallelism markers and full traceability back to the feature's specs and stories.
 ---
 
 ## Prerequisites
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the feature context (slug, intent, current state).
+This skill is invoked by the `proven-needs` orchestrator, which provides the feature context (slug, intent, current state).
 
 ## Observe
 

@@ -1,11 +1,11 @@
 ---
 name: needs-security
-description: Assess and remediate the project security posture. Use when the proven-intent orchestrator determines that security improvements are needed. Operates at the project level. Observes dependency vulnerabilities, code patterns (hardcoded secrets, injection risks, insecure defaults), and configuration issues. Proposes and applies remediations that satisfy security constraints.
+description: Assess and remediate the project security posture. Use when the proven-needs orchestrator determines that security improvements are needed. Operates at the project level. Observes dependency vulnerabilities, code patterns (hardcoded secrets, injection risks, insecure defaults), and configuration issues. Proposes and applies remediations that satisfy security constraints.
 ---
 
 ## Prerequisites
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the desired state and current state context.
+This skill is invoked by the `proven-needs` orchestrator, which provides the desired state and current state context.
 
 ## Observe
 

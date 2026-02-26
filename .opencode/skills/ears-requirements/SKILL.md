@@ -117,10 +117,10 @@ Every requirement you write or review must satisfy all of these:
 
 EARS was originally described in:
 
-- Mavin, A., Wilkinson, P., Harwood, A., and Novak, M., "Easy Approach to Requirements Syntax (EARS)", Proceedings of the 17th IEEE International Requirements Engineering Conference (RE), 2009. Link: https://ieeexplore.ieee.org/document/5328509
+- Mavin, A., Wilkinson, P., Harwood, A., and Novak, M., "Easy Approach to Requirements Syntax (EARS)", Proceedings of the 17th IEEE International Requirements Engineering Conference (RE), 2009.
 
 The completeness techniques, lessons on requirement pairing, passive/active distinctions, and additional troubleshooting guidance are informed by the follow-up study:
 
 - Mavin, A. and Wilkinson, P., "Big EARS (The Return of Easy Approach to Requirements Syntax)", Proceedings of the 18th IEEE International Requirements Engineering Conference (RE), 2010.
 
-The templates, methodology, and guidance in this skill are derived from these works. All content is written in the authors' own words for this skill; no verbatim text from the papers is reproduced.
+This material is an original summary and interpretation of the EARS approach as described in the cited IEEE publications.

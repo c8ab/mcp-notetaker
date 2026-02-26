@@ -1,11 +1,11 @@
 ---
 name: needs-adr
-description: Create and manage Architecture Decision Records (ADRs). Use when the proven-intent orchestrator identifies technology decisions that need recording, or when explicitly asked to record a decision. Operates at the project level in docs/adrs/. ADRs are permanent, append-only records referenced by feature designs across all feature packages.
+description: Create and manage Architecture Decision Records (ADRs). Use when the proven-needs orchestrator identifies technology decisions that need recording, or when explicitly asked to record a decision. Operates at the project level in docs/adrs/. ADRs are permanent, append-only records referenced by feature designs across all feature packages.
 ---
 
 ## Prerequisites
 
-This skill is invoked by the `proven-intent` orchestrator or by the `needs-design` capability when technology decisions are identified during the design process.
+This skill is invoked by the `proven-needs` orchestrator or by the `needs-design` capability when technology decisions are identified during the design process.
 
 ## Observe
 
