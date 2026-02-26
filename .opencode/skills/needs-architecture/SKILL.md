@@ -1,11 +1,11 @@
 ---
 name: needs-architecture
-description: Create and maintain the system architecture document. Use when the proven-intent orchestrator determines the architecture document needs creating or updating. Operates at the project level, producing docs/architecture.adoc as a living document reflecting the current system state. Supports greenfield projects (from feature designs), existing projects (from codebase analysis), and updates after feature implementations.
+description: Create and maintain the system architecture document. Use when the proven-needs orchestrator determines the architecture document needs creating or updating. Operates at the project level, producing docs/architecture.adoc as a living document reflecting the current system state. Supports greenfield projects (from feature designs), existing projects (from codebase analysis), and updates after feature implementations.
 ---
 
 ## Prerequisites
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the current state context.
+This skill is invoked by the `proven-needs` orchestrator, which provides the current state context.
 
 ## Observe
 

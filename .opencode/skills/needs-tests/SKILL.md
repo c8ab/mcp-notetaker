@@ -1,11 +1,11 @@
 ---
 name: needs-tests
-description: Derive and generate tests from feature specifications. Use when the proven-intent orchestrator determines that a feature needs test coverage. Operates within a single feature package at docs/features/<slug>/. Translates the black-box verification descriptions in spec.adoc into executable test cases, using the project's existing test framework and conventions.
+description: Derive and generate tests from feature specifications. Use when the proven-needs orchestrator determines that a feature needs test coverage. Operates within a single feature package at docs/features/<slug>/. Translates the black-box verification descriptions in spec.adoc into executable test cases, using the project's existing test framework and conventions.
 ---
 
 ## Prerequisites
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the feature context (slug, intent, current state).
+This skill is invoked by the `proven-needs` orchestrator, which provides the feature context (slug, intent, current state).
 
 ## Observe
 

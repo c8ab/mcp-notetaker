@@ -1,13 +1,13 @@
 ---
 name: needs-spec
-description: Create and maintain feature specifications with EARS requirements derived from user stories. Use when the proven-intent orchestrator determines that a feature needs specifications created or synced. Operates within a single feature package at docs/features/<slug>/. Specs define WHAT must be true — black-box testable requirements for externally observable behavior.
+description: Create and maintain feature specifications with EARS requirements derived from user stories. Use when the proven-needs orchestrator determines that a feature needs specifications created or synced. Operates within a single feature package at docs/features/<slug>/. Specs define WHAT must be true — black-box testable requirements for externally observable behavior.
 ---
 
 ## Prerequisites
 
 Load the `ears-requirements` skill before writing requirements. It provides the EARS sentence types and templates.
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the feature context (slug, intent, current state).
+This skill is invoked by the `proven-needs` orchestrator, which provides the feature context (slug, intent, current state).
 
 ## Observe
 

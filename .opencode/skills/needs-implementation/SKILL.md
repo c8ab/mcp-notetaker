@@ -1,11 +1,11 @@
 ---
 name: needs-implementation
-description: Implement code for a feature from its task list or design. Use when the proven-intent orchestrator determines that a feature needs code implementation. Operates within a single feature package at docs/features/<slug>/. Reads the feature's tasks and design to produce working code, one phase at a time. After each phase, verifies the build, commits, and asks the user before proceeding.
+description: Implement code for a feature from its task list or design. Use when the proven-needs orchestrator determines that a feature needs code implementation. Operates within a single feature package at docs/features/<slug>/. Reads the feature's tasks and design to produce working code, one phase at a time. After each phase, verifies the build, commits, and asks the user before proceeding.
 ---
 
 ## Prerequisites
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the feature context (slug, intent, current state).
+This skill is invoked by the `proven-needs` orchestrator, which provides the feature context (slug, intent, current state).
 
 ## Observe
 

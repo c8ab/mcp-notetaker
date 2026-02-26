@@ -1,11 +1,11 @@
 ---
 name: needs-compliance
-description: Verify and enforce license and policy compliance across the project. Use when the proven-intent orchestrator determines that compliance needs checking or enforcement. Operates at the project level. Observes dependency licenses, policy requirements, and regulatory constraints. Identifies violations and proposes remediations.
+description: Verify and enforce license and policy compliance across the project. Use when the proven-needs orchestrator determines that compliance needs checking or enforcement. Operates at the project level. Observes dependency licenses, policy requirements, and regulatory constraints. Identifies violations and proposes remediations.
 ---
 
 ## Prerequisites
 
-This skill is invoked by the `proven-intent` orchestrator, which provides the desired state and current state context.
+This skill is invoked by the `proven-needs` orchestrator, which provides the desired state and current state context.
 
 ## Observe
 
