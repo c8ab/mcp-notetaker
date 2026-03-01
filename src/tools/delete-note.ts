@@ -1,22 +1,22 @@
 /**
- * delete_note MCP tool -- Soft-deletes a note.
+ * delete_note MCP tool -- Deletes a note (soft-delete on the API side).
  */
 
 import { z } from "zod";
 import { DeleteNoteSchema } from "../schema.js";
-import { NoteRepository, NoteAlreadyDeletedError } from "../repository/note-repository.js";
+import { NoteApiClient, NoteAlreadyDeletedError } from "../repository/note-repository.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export function registerDeleteNote(server: McpServer, repo: NoteRepository): void {
+export function registerDeleteNote(server: McpServer, client: NoteApiClient): void {
   server.registerTool(
     "delete_note",
     {
-      description: "Soft-delete a note. The note is marked as deleted but preserved in the database for audit history. It will no longer appear in get, list, or search results.",
+      description: "Delete a note. The note is soft-deleted on the API side -- it will no longer appear in get, list, or search results but can be found via list_deleted_notes.",
       inputSchema: DeleteNoteSchema,
     },
-    (args: z.infer<typeof DeleteNoteSchema>) => {
+    async (args: z.infer<typeof DeleteNoteSchema>) => {
       try {
-        const result = repo.softDelete(args.note_id);
+        const result = await client.delete(args.note_id);
 
         if (!result) {
           return {

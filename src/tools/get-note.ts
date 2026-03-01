@@ -4,18 +4,18 @@
 
 import { z } from "zod";
 import { GetNoteSchema } from "../schema.js";
-import type { NoteRepository } from "../repository/note-repository.js";
+import type { NoteApiClient } from "../repository/note-repository.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export function registerGetNote(server: McpServer, repo: NoteRepository): void {
+export function registerGetNote(server: McpServer, client: NoteApiClient): void {
   server.registerTool(
     "get_note",
     {
       description: "Retrieve a single note by its ID. Returns the complete note record.",
       inputSchema: GetNoteSchema,
     },
-    (args: z.infer<typeof GetNoteSchema>) => {
-      const note = repo.getById(args.note_id);
+    async (args: z.infer<typeof GetNoteSchema>) => {
+      const note = await client.getById(args.note_id);
 
       if (!note) {
         return {

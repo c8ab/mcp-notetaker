@@ -4,19 +4,19 @@
 
 import { z } from "zod";
 import { CreateNoteSchema } from "../schema.js";
-import { NoteRepository, ParentNoteNotFoundError } from "../repository/note-repository.js";
+import { NoteApiClient, ApiError } from "../repository/note-repository.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export function registerCreateNote(server: McpServer, repo: NoteRepository): void {
+export function registerCreateNote(server: McpServer, client: NoteApiClient): void {
   server.registerTool(
     "create_note",
     {
       description: "Create a new atomic note with metadata. Content should be in AsciiDoc format.",
       inputSchema: CreateNoteSchema,
     },
-    (args: z.infer<typeof CreateNoteSchema>) => {
+    async (args: z.infer<typeof CreateNoteSchema>) => {
       try {
-        const note = repo.create({
+        const note = await client.create({
           title: args.title,
           content: args.content,
           session_id: args.session_id,
@@ -25,6 +25,7 @@ export function registerCreateNote(server: McpServer, repo: NoteRepository): voi
           tags: args.tags,
           parent_note_id: args.parent_note_id,
           context_url: args.context_url,
+          created_at: args.created_at,
         });
 
         return {
@@ -36,7 +37,7 @@ export function registerCreateNote(server: McpServer, repo: NoteRepository): voi
           ],
         };
       } catch (error) {
-        if (error instanceof ParentNoteNotFoundError) {
+        if (error instanceof ApiError) {
           return {
             isError: true,
             content: [

@@ -2,7 +2,7 @@
  * Core type definitions for the note management system.
  */
 
-/** A complete note record as stored in the database. */
+/** A complete note record as returned by the notetaker-api. */
 export interface Note {
   note_id: string;
   session_id: string;
@@ -28,6 +28,7 @@ export interface CreateNoteInput {
   tags?: string[];
   parent_note_id?: string;
   context_url?: string;
+  created_at?: string;
 }
 
 /** Input for updating an existing note. Only mutable fields. */
@@ -47,6 +48,8 @@ export interface ListNotesInput {
   agent?: string;
   tags?: string[];
   parent_note_id?: string;
+  created_after?: string;
+  updated_after?: string;
 }
 
 /** Input for searching notes by content. */
@@ -54,7 +57,18 @@ export interface SearchNotesInput {
   query: string;
 }
 
-/** Result of a successful soft-delete operation. */
+/** Input for listing deleted note IDs. */
+export interface ListDeletedInput {
+  since: string;
+}
+
+/** A deleted note entry returned by the deleted-notes endpoint. */
+export interface DeletedNoteEntry {
+  note_id: string;
+  deleted_at: string;
+}
+
+/** Result of a successful delete operation. */
 export interface DeleteNoteResult {
   note_id: string;
   deleted_at: string;

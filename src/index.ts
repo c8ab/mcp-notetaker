@@ -1,48 +1,34 @@
 #!/usr/bin/env node
 
 /**
- * MCP Notetaker -- An MCP server for recording atomic notes with SQLite persistence.
+ * MCP Notetaker -- An MCP server for recording atomic notes via the notetaker-api.
  *
- * Entry point: creates the MCP server, initializes the database, registers all tools,
+ * Entry point: creates the MCP server, initializes the API client, registers all tools,
  * and connects to stdio transport.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { NoteRepository } from "./repository/note-repository.js";
+import { NoteApiClient } from "./repository/note-repository.js";
 import { registerCreateNote } from "./tools/create-note.js";
 import { registerGetNote } from "./tools/get-note.js";
 import { registerListNotes } from "./tools/list-notes.js";
 import { registerUpdateNote } from "./tools/update-note.js";
 import { registerDeleteNote } from "./tools/delete-note.js";
 import { registerSearchNotes } from "./tools/search-notes.js";
-
-import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { homedir } from "node:os";
+import { registerListDeletedNotes } from "./tools/list-deleted-notes.js";
 
 /**
- * Resolves the database file path from environment or default.
- * Default: ~/.local/share/mcp-notetaker/notes.db
+ * Resolves the API base URL from environment or default.
+ * Default: http://localhost:3000
  */
-function resolveDbPath(): string {
-  const envPath = process.env.NOTETAKER_DB_PATH;
-  if (envPath) {
-    return envPath;
-  }
-
-  const dataDir = join(homedir(), ".local", "share", "mcp-notetaker");
-  return join(dataDir, "notes.db");
+function resolveApiUrl(): string {
+  return process.env.NOTETAKER_API_URL ?? "http://localhost:3000";
 }
 
 async function main(): Promise<void> {
-  const dbPath = resolveDbPath();
-
-  // Ensure the directory exists
-  mkdirSync(dirname(dbPath), { recursive: true });
-
-  // Initialize the repository
-  const repo = new NoteRepository(dbPath);
+  const apiUrl = resolveApiUrl();
+  const client = new NoteApiClient(apiUrl);
 
   // Create the MCP server
   const server = new McpServer(
@@ -58,16 +44,16 @@ async function main(): Promise<void> {
   );
 
   // Register all tools
-  registerCreateNote(server, repo);
-  registerGetNote(server, repo);
-  registerListNotes(server, repo);
-  registerUpdateNote(server, repo);
-  registerDeleteNote(server, repo);
-  registerSearchNotes(server, repo);
+  registerCreateNote(server, client);
+  registerGetNote(server, client);
+  registerListNotes(server, client);
+  registerUpdateNote(server, client);
+  registerDeleteNote(server, client);
+  registerSearchNotes(server, client);
+  registerListDeletedNotes(server, client);
 
   // Graceful shutdown
   const cleanup = () => {
-    repo.close();
     process.exit(0);
   };
   process.on("SIGINT", cleanup);

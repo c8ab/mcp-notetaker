@@ -14,6 +14,7 @@ export const CreateNoteSchema = z.object({
   tags: z.array(z.string()).optional().describe("Array of tags for categorization"),
   parent_note_id: z.string().optional().describe("ID of a parent note for threading"),
   context_url: z.string().optional().describe("URL or file path the note relates to"),
+  created_at: z.string().optional().describe("ISO 8601 timestamp; defaults to now if omitted"),
 });
 
 /** Schema for the get_note tool input. */
@@ -28,6 +29,8 @@ export const ListNotesSchema = z.object({
   agent: z.string().optional().describe("Filter by agent"),
   tags: z.array(z.string()).optional().describe("Filter by tags (must contain all)"),
   parent_note_id: z.string().optional().describe("Filter by parent note (direct children)"),
+  created_after: z.string().optional().describe("Only return notes created after this ISO 8601 timestamp"),
+  updated_after: z.string().optional().describe("Only return notes updated after this ISO 8601 timestamp"),
 });
 
 /** Schema for the update_note tool input. */
@@ -48,4 +51,9 @@ export const DeleteNoteSchema = z.object({
 /** Schema for the search_notes tool input. */
 export const SearchNotesSchema = z.object({
   query: z.string().min(1).describe("Search query string"),
+});
+
+/** Schema for the list_deleted_notes tool input. */
+export const ListDeletedSchema = z.object({
+  since: z.string().min(1).describe("ISO 8601 timestamp -- only return notes deleted after this time"),
 });

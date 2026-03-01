@@ -4,19 +4,19 @@
 
 import { z } from "zod";
 import { UpdateNoteSchema } from "../schema.js";
-import { NoteRepository, ParentNoteNotFoundError } from "../repository/note-repository.js";
+import { NoteApiClient, ApiError } from "../repository/note-repository.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export function registerUpdateNote(server: McpServer, repo: NoteRepository): void {
+export function registerUpdateNote(server: McpServer, client: NoteApiClient): void {
   server.registerTool(
     "update_note",
     {
       description: "Update an existing note's mutable fields (title, content, tags, context_url, parent_note_id). Immutable fields (session_id, user_id, agent, created_at) cannot be changed.",
       inputSchema: UpdateNoteSchema,
     },
-    (args: z.infer<typeof UpdateNoteSchema>) => {
+    async (args: z.infer<typeof UpdateNoteSchema>) => {
       try {
-        const note = repo.update({
+        const note = await client.update({
           note_id: args.note_id,
           title: args.title,
           content: args.content,
@@ -46,7 +46,7 @@ export function registerUpdateNote(server: McpServer, repo: NoteRepository): voi
           ],
         };
       } catch (error) {
-        if (error instanceof ParentNoteNotFoundError) {
+        if (error instanceof ApiError) {
           return {
             isError: true,
             content: [
